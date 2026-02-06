@@ -7,7 +7,7 @@ export default function Page() {
 
   useEffect(() => {
     fetch('/api/health')
-      .then(res => res.json())
+      .then((res) => res.json())
       .then(setData);
   }, []);
 
