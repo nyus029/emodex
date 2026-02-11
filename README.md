@@ -1,49 +1,91 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# emodex
 
-## Getting Started
+Next.js + Mastra プロジェクトです。ローカルで MySQL を Docker 上に立ち上げ、Prisma から接続できます。
 
-First, run the development server:
+## セットアップ
+
+**Node.js**: Prisma 7 は Node **22.12 以上**が必要です。nvm を使う場合:
+
+```bash
+nvm use
+```
+
+```bash
+npm install
+cp .env.example .env
+```
+
+## MySQL (Docker)
+
+```bash
+npm run db:up
+```
+
+- Host: `localhost`
+- Port: `3307` (コンテナ内は `3306`)
+- DB: `emodex`
+- User: `emodex`
+- Password: `emodex`
+
+停止:
+
+```bash
+npm run db:down
+```
+
+初期化 SQL（権限付与）を再適用したい場合は、`docker compose down -v` でボリューム削除後に `npm run db:up` を実行します。
+
+ログ確認:
+
+```bash
+npm run db:logs
+```
+
+## Prisma
+
+初回にクライアント生成:
+
+```bash
+npm run prisma:generate
+```
+
+初回マイグレーション:
+
+```bash
+npm run prisma:migrate -- --name init
+```
+
+**`migrate reset` 後に再度ドリフトが出る場合:**  
+Prisma 7 + `prisma.config.ts` 利用時、reset 後に `_prisma_migrations` が正しく記録されず同じドリフトが出ることがあります。そのときは「適用済み」として履歴を合わせてください:
+
+```bash
+npm run prisma:migrate:resolve
+```
+
+その後、`npm run prisma:migrate` はそのまま通ります。
+
+User のモックを 10 件投入する seed:
+
+```bash
+npm run prisma:seed
+```
+
+Prisma Studio:
+
+```bash
+npm run prisma:studio
+```
+
+## 開発起動
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 接続確認 API
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+DB のヘルスチェック:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
-## Codex PR Review Automation
-
-This repository includes a GitHub Actions workflow at `.github/workflows/codex-pr-review.yml`.
-
-- Trigger: when a pull request is labeled with `Codex` (or `codex`), and on subsequent PR updates while that label is present.
-- Behavior: runs Codex against the PR diff and posts/updates a review comment on the PR.
-
-### Required setup
-
-1. Add a repository secret named `OPENAI_API_KEY`.
-2. Create and use a PR label named `Codex` (or `codex`).
-3. Optional: set repository variable `CODEX_MODEL` to override the default model (`gpt-5.2-codex`).
+- `GET /api/health/db`
+- 成功時: `200`
+- 失敗時: `503`（エラー詳細を返却）
