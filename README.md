@@ -34,3 +34,16 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Codex PR Review Automation
+
+This repository includes a GitHub Actions workflow at `.github/workflows/codex-pr-review.yml`.
+
+- Trigger: when a pull request is labeled with `Codex` (or `codex`), and on subsequent PR updates while that label is present.
+- Behavior: runs Codex against the PR diff and posts/updates a review comment on the PR.
+
+### Required setup
+
+1. Add a repository secret named `OPENAI_API_KEY`.
+2. Create and use a PR label named `Codex` (or `codex`).
+3. Optional: set repository variable `CODEX_MODEL` to override the default model (`gpt-5.2-codex`).
