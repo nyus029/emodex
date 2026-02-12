@@ -34,7 +34,7 @@ jobs:
       PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
       PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
       CODEX_MODEL: ${{ vars.CODEX_MODEL || 'gpt-5.2-codex' }}
-      MARKER: "<!-- codex-pr-review -->"
+      MARKER: '<!-- codex-pr-review -->'
 
     steps:
       - name: Checkout
