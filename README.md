@@ -49,10 +49,16 @@ npm run db:logs
 npm run prisma:generate
 ```
 
-初回マイグレーション:
+マイグレーション適用（適用済みはスキップされます）:
 
 ```bash
-npm run prisma:migrate -- --name init
+npm run prisma:migrate
+```
+
+新しいマイグレーションを作成する場合:
+
+```bash
+npm run prisma:migrate:dev -- --name <migration_name>
 ```
 
 **`migrate reset` 後に再度ドリフトが出る場合:**  
