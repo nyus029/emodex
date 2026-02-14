@@ -17,7 +17,7 @@ interface AlbumInsightResponse {
 
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse<AlbumInsightResponse>> {
   const { id } = await params;
 
