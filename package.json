@@ -16,13 +16,13 @@
     "db:up": "docker compose up -d mysql || docker-compose up -d mysql",
     "db:down": "docker compose down || docker-compose down",
     "db:logs": "docker compose logs -f mysql || docker-compose logs -f mysql",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate deploy",
-    "prisma:migrate:dev": "prisma migrate dev",
-    "prisma:migrate:reset": "prisma migrate reset",
-    "prisma:migrate:resolve": "prisma migrate resolve --applied 20260211143956_init",
-    "prisma:seed": "prisma db seed",
-    "prisma:studio": "prisma studio"
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:migrate:dev": "prisma migrate dev",
+    "db:migrate:reset": "prisma migrate reset",
+    "db:migrate:resolve": "prisma migrate resolve --applied 20260211143956_init",
+    "db:seed": "prisma db seed",
+    "db:studio": "prisma studio"
   },
   "dependencies": {
     "@mastra/core": "^1.2.0",
