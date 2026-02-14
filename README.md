@@ -46,40 +46,40 @@ npm run db:logs
 初回にクライアント生成:
 
 ```bash
-npm run prisma:generate
+npm run db:generate
 ```
 
 マイグレーション適用（適用済みはスキップされます）:
 
 ```bash
-npm run prisma:migrate
+npm run db:migrate
 ```
 
 新しいマイグレーションを作成する場合:
 
 ```bash
-npm run prisma:migrate:dev -- --name <migration_name>
+npm run db:migrate:dev -- --name <migration_name>
 ```
 
 **`migrate reset` 後に再度ドリフトが出る場合:**  
 Prisma 7 + `prisma.config.ts` 利用時、reset 後に `_prisma_migrations` が正しく記録されず同じドリフトが出ることがあります。そのときは「適用済み」として履歴を合わせてください:
 
 ```bash
-npm run prisma:migrate:resolve
+npm run db:migrate:resolve
 ```
 
-その後、`npm run prisma:migrate` はそのまま通ります。
+その後、`npm run db:migrate` はそのまま通ります。
 
 User のモックを 10 件投入する seed:
 
 ```bash
-npm run prisma:seed
+npm run db:seed
 ```
 
 Prisma Studio:
 
 ```bash
-npm run prisma:studio
+npm run db:studio
 ```
 
 ## 開発起動
