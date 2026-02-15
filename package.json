@@ -2,11 +2,28 @@
   "name": "emodex",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "next dev --webpack",
+    "prebuild": "prisma generate",
+    "build": "next build --webpack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:up": "docker compose up -d mysql || docker-compose up -d mysql",
+    "db:down": "docker compose down || docker-compose down",
+    "db:logs": "docker compose logs -f mysql || docker-compose logs -f mysql",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:migrate:dev": "prisma migrate dev",
+    "db:migrate:reset": "prisma migrate reset",
+    "db:migrate:resolve": "prisma migrate resolve --applied 20260211143956_init",
+    "db:seed": "prisma db seed",
+    "db:studio": "prisma studio",
+    "prepare": "husky"
   },
   "dependencies": {
     "@mastra/core": "^1.2.0",
@@ -14,8 +31,13 @@
     "@mastra/loggers": "^1.0.1",
     "@mastra/memory": "^1.1.0",
     "@mastra/observability": "^1.2.0",
+    "@prisma/adapter-mariadb": "^7.3.0",
+    "@prisma/client": "^7.0.0",
+    "dotenv": "^17.2.4",
     "mastra": "^1.2.0",
     "next": "16.1.6",
+    "next-pwa": "^5.6.0",
+    "prisma": "^7.0.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "zod": "^4.3.6"
@@ -27,7 +49,16 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "prettier": "3.8.1",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,json,css,md}": [
+      "prettier --write"
+    ]
   }
 }

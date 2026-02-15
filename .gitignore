@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -39,3 +40,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# pwa
+sw.js
+public/workbox-*.js
+public/workbox-*.js.map
+public/workbox-*.js.map.gz
+public/workbox-*.js.map.br
+public/workbox-*.js.map.br.gz
+public/workbox-*.js.map.br.gz.br
+public/workbox-*.js.map.br.gz.br.gz
+public/workbox-*.js.map.br.gz.br.gz.br
+public/workbox-*.js.map.br.gz.br.gz.br.gz

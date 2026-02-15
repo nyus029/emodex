@@ -1,0 +1,110 @@
+name: Codex PR Review
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - labeled
+      - ready_for_review
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  codex-review:
+    if: >
+      !github.event.pull_request.draft &&
+      (
+        contains(github.event.pull_request.labels.*.name, 'Codex') ||
+        contains(github.event.pull_request.labels.*.name, 'codex')
+      ) &&
+      (
+        github.event.action != 'labeled' ||
+        github.event.label.name == 'Codex' ||
+        github.event.label.name == 'codex'
+      )
+    runs-on: ubuntu-latest
+    env:
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+      PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+      PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      CODEX_MODEL: ${{ vars.CODEX_MODEL || 'gpt-5.2-codex' }}
+      MARKER: '<!-- codex-pr-review -->'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Prepare prompt
+        run: |
+          git fetch --no-tags --prune --depth=1 origin "${PR_BASE_REF}"
+          {
+            echo "You are reviewing pull request #${PR_NUMBER}."
+            echo "Write concise review feedback in Japanese."
+            echo "Focus on: bugs, regressions, security, and missing tests."
+            echo "If there are no major issues, say so clearly."
+            echo
+            echo "Diff (base=${PR_BASE_REF}, head=${PR_HEAD_SHA}):"
+            git diff --unified=3 "origin/${PR_BASE_REF}...${PR_HEAD_SHA}" | head -c 120000
+          } > codex_prompt.txt
+
+      - name: Run Codex
+        id: codex
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          model: ${{ env.CODEX_MODEL }}
+          prompt_file: codex_prompt.txt
+
+      - name: Create or update PR comment
+        uses: actions/github-script@v7
+        env:
+          BODY: ${{ steps.codex.outputs.final-message }}
+        with:
+          script: |
+            const marker = process.env.MARKER;
+            const body = `${marker}
+
+            ## Codex Review
+
+            ${process.env.BODY || "Codex did not return a review message."}`;
+
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number,
+              per_page: 100
+            });
+
+            const existing = comments.find((comment) =>
+              comment.user?.type === "Bot" && comment.body?.includes(marker)
+            );
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existing.id,
+                body
+              });
+              core.info(`Updated comment ${existing.id}`);
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body
+              });
+              core.info("Created new Codex review comment");
+            }
