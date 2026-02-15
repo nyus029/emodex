@@ -95,3 +95,7 @@ DB のヘルスチェック:
 - `GET /api/health/db`
 - 成功時: `200`
 - 失敗時: `503`（エラー詳細を返却）
+
+## Production 事前ロック
+
+Vercel の本番環境では初回リリース完了まで `PRE_RELEASE_LOCK=true` のままデプロイし、全リクエストを 403 で遮断します（ヘルスチェックのみ通過）。公開するときは環境変数を `false` に変更して再デプロイしてください。Preview/ローカル (`VERCEL_ENV=preview|development`) では影響しません。
