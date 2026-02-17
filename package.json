@@ -13,6 +13,7 @@
     "lint": "eslint",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "openapi:validate": "node scripts/validate-openapi.mjs",
     "db:up": "docker compose up -d mysql || docker-compose up -d mysql",
     "db:down": "docker compose down || docker-compose down",
     "db:logs": "docker compose logs -f mysql || docker-compose logs -f mysql",
@@ -43,6 +44,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@apidevtools/swagger-parser": "^12.1.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
