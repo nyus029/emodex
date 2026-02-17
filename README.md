@@ -111,6 +111,12 @@ OPENAI_API_KEY=<your_key>
 OPENAI_MODEL=openai/gpt-5-codex
 ```
 
+## API ドキュメント
+
+- OpenAPI YAML: `/doc/api/openapi.yaml`
+- Swagger UI: `/api/docs`（上記 YAML を読み込み）
+- 仕様を更新したら `public/doc/api/openapi.yaml` を編集し、`npm run openapi:validate` で整合性を検証してください。
+
 ## 接続確認 API
 
 DB のヘルスチェック:

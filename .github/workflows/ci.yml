@@ -48,3 +48,23 @@ jobs:
 
       - name: Run format check
         run: npm run format:check
+
+  openapi:
+    name: OpenAPI
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate OpenAPI
+        run: npm run openapi:validate

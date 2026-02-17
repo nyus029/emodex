@@ -1,0 +1,256 @@
+openapi: 3.1.0
+info:
+  title: Emodex API
+  version: 0.1.0
+  description: HTTP API for the Emodex Next.js application.
+servers:
+  - url: http://localhost:3000
+    description: Local development
+  - url: https://{host}
+    description: Production
+    variables:
+      host:
+        default: example.com
+paths:
+  /api/health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      responses:
+        '200':
+          description: API is reachable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+  /api/health/db:
+    get:
+      tags:
+        - Health
+      summary: Database connectivity check
+      responses:
+        '200':
+          description: Database connection is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DbHealthResponse'
+        '503':
+          description: Database connection failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/chat/stream:
+    post:
+      tags:
+        - Chat
+      summary: Stream chat response
+      description: Streams a text response from the chat agent. Falls back to a mock stream when `OPENAI_API_KEY` is not set.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+      responses:
+        '200':
+          description: Streamed chat response
+          content:
+            text/plain:
+              schema:
+                type: string
+                description: Text stream from the chat agent.
+        '400':
+          description: Missing message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Agent is not configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/albums/{id}:
+    get:
+      tags:
+        - Albums
+      summary: Get album overview
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Album identifier
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Album overview
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Album'
+  /api/v1/albums/insight/{id}:
+    get:
+      tags:
+        - Albums
+      summary: Get album insight
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Album identifier
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Album insight
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlbumInsightResponse'
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Hello World
+    DbHealthResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Database connection is healthy
+    ChatRequest:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          description: User input to the chat agent.
+          example: 今日は何をすればいい？
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: message is required
+        message:
+          type: string
+          description: Optional message field for certain errors.
+    Album:
+      type: object
+      required:
+        - id
+        - albumBasicInfo
+        - updateNotification
+        - dividendNotification
+      properties:
+        id:
+          type: string
+          example: abc123
+        albumBasicInfo:
+          $ref: '#/components/schemas/AlbumBasicInfo'
+        updateNotification:
+          $ref: '#/components/schemas/AlbumUpdateNotification'
+        dividendNotification:
+          $ref: '#/components/schemas/AlbumDividendNotification'
+    AlbumBasicInfo:
+      type: object
+      required:
+        - albumName
+        - createdAt
+        - plannedDividend
+        - createdTags
+        - requiredAtAlbumCreation
+      properties:
+        albumName:
+          type: string
+          example: 思い出アルバム
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-02-13T00:00:00.000Z'
+        plannedDividend:
+          type: string
+          example: '2026-03-31'
+        createdTags:
+          type: array
+          items:
+            type: string
+          example:
+            - 家族
+            - 旅行
+            - イベント
+        requiredAtAlbumCreation:
+          type: boolean
+          example: true
+    AlbumUpdateNotification:
+      type: object
+      properties:
+        addedFolderHistory:
+          type: array
+          items:
+            type: object
+            properties:
+              folderName:
+                type: string
+                example: 2026_01_京都旅行
+              addedAt:
+                type: string
+                format: date-time
+                example: '2026-01-15T09:30:00.000Z'
+    AlbumDividendNotification:
+      type: object
+      properties:
+        recordedAtTransaction:
+          type: boolean
+          example: true
+        dividendDates:
+          type: array
+          items:
+            type: string
+            example: '2025-12-31'
+    AlbumInsightResponse:
+      type: object
+      required:
+        - albumBasicInfo
+        - emoValueInfo
+      properties:
+        albumBasicInfo:
+          type: object
+          properties:
+            name:
+              type: string
+              example: Album 123
+            createdAt:
+              type: string
+              format: date
+              example: '2026-02-01'
+            dividend:
+              type: string
+              example: ¥1,250
+        emoValueInfo:
+          type: object
+          properties:
+            emoValue:
+              type: number
+              example: 8500
+            dayOverDayChange:
+              $ref: '#/components/schemas/EmoValueChange'
+    EmoValueChange:
+      type: object
+      properties:
+        value:
+          type: number
+          example: 125
+        percentage:
+          type: number
+          format: float
+          example: 1.49
