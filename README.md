@@ -88,6 +88,29 @@ npm run db:studio
 npm run dev
 ```
 
+## Mastra チャット (最小構成)
+
+DB モデル追加なしで、Next.js 上で Mastra を stream チャットとして動作させる最小実装を入れています。
+
+- 画面: `/`
+- API: `POST /api/chat/stream`
+
+### 動作モード
+
+1. `OPENAI_API_KEY` 未設定: モック応答をストリーム返却（ローカル検証用）
+2. `OPENAI_API_KEY` 設定: Codex モデル（`OPENAI_MODEL`、デフォルト `openai/gpt-5-codex`）で実応答
+
+```bash
+npm run dev
+```
+
+必要に応じて `.env` に以下を設定してください。
+
+```bash
+OPENAI_API_KEY=<your_key>
+OPENAI_MODEL=openai/gpt-5-codex
+```
+
 ## 接続確認 API
 
 DB のヘルスチェック:
