@@ -45,7 +45,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const stream = await agent.stream(message);
+  const stream = await agent.stream([{ role: 'user', content: message }]);
 
   const textStream = new ReadableStream<Uint8Array>({
     async start(controller) {
