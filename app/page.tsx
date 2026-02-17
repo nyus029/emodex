@@ -2,12 +2,93 @@
 
 import { FormEvent, useState } from 'react';
 
+const isPwaStandalone = () => {
+  if (typeof window === 'undefined') return false;
+
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    (window.navigator as Navigator & { standalone?: boolean }).standalone ===
+      true
+  );
+};
+
 export default function Home() {
   const [input, setInput] = useState(
     'Mastra をローカルで動かす最小セットを教えて',
   );
   const [output, setOutput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [notificationMessage, setNotificationMessage] =
+    useState('通知テストを送信しました。');
+
+  const requestNotificationPermission = async () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      alert('このブラウザは Notification API に対応していません。');
+      return false;
+    }
+
+    if (Notification.permission === 'granted') return true;
+
+    if (Notification.permission === 'denied') {
+      alert('通知がブロックされています。ブラウザ設定から許可してください。');
+      return false;
+    }
+
+    const permission = await Notification.requestPermission();
+    return permission === 'granted';
+  };
+
+  const notifyFromBrowser = (body: string) => {
+    const notification = new Notification('Web通知 (ブラウザ)', {
+      body,
+      icon: '/next.svg',
+      badge: '/next.svg',
+    });
+
+    notification.onclick = () => {
+      window.focus();
+    };
+  };
+
+  const notifyFromServiceWorker = async (body: string) => {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
+      alert('Service Worker が利用できないため、PWA通知を送信できません。');
+      return;
+    }
+
+    const registration =
+      (await navigator.serviceWorker.getRegistration('/')) ||
+      (await navigator.serviceWorker.register('/push-sw.js'));
+
+    if (!registration.active && navigator.serviceWorker.ready) {
+      await navigator.serviceWorker.ready;
+    }
+
+    registration.active?.postMessage({
+      type: 'SHOW_NOTIFICATION',
+      payload: {
+        title: 'PWA通知 (Service Worker)',
+        options: {
+          body,
+          icon: '/next.svg',
+          badge: '/next.svg',
+          data: { url: '/' },
+        },
+      },
+    });
+  };
+
+  const onClickTestNotification = async () => {
+    const isGranted = await requestNotificationPermission();
+    if (!isGranted) return;
+
+    if (isPwaStandalone()) {
+      await notifyFromServiceWorker(notificationMessage);
+      return;
+    }
+
+    notifyFromBrowser(notificationMessage);
+  };
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -70,6 +151,31 @@ export default function Home() {
         <pre className="whitespace-pre-wrap text-sm">
           {output || '（ここにストリーム結果が表示されます）'}
         </pre>
+      </section>
+
+      <section className="rounded border border-zinc-300 p-4">
+        <h2 className="mb-2 font-semibold">
+          通知テスト（通常Web / PWA Push切替）
+        </h2>
+        <p className="mb-3 text-sm text-zinc-600 dark:text-zinc-300">
+          通常ブラウザでは Web通知、PWA standalone では Service Worker
+          経由の通知を送信します。
+        </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <input
+            value={notificationMessage}
+            onChange={(e) => setNotificationMessage(e.target.value)}
+            className="w-full rounded border border-zinc-300 px-3 py-2"
+            placeholder="通知本文"
+          />
+          <button
+            type="button"
+            onClick={onClickTestNotification}
+            className="w-fit rounded bg-zinc-800 px-4 py-2 text-white"
+          >
+            通知テスト
+          </button>
+        </div>
       </section>
     </main>
   );

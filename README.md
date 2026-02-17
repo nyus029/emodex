@@ -122,3 +122,14 @@ DB のヘルスチェック:
 ## Production 事前ロック
 
 Vercel の本番環境では初回リリース完了まで `PRE_RELEASE_LOCK=true` のままデプロイし、全リクエストを 403 で遮断します（ヘルスチェックのみ通過）。公開するときは環境変数を `false` に変更して再デプロイしてください。Preview/ローカル (`VERCEL_ENV=preview|development`) では影響しません。
+
+## 通知切り替え（通常Web通知 / PWA通知）
+
+`/` 画面に通知テスト UI を追加しています。
+
+- 通常のブラウザタブ表示: `Notification` API を使って Web 通知を表示
+- PWA（standalone）表示: Service Worker（`/push-sw.js`）へ `postMessage` して通知を表示
+
+判定は `display-mode: standalone` と `navigator.standalone` を利用しています。
+
+> 現在はローカル通知の動作検証を目的とした実装です。Web Push の配信基盤（VAPID 鍵発行・サーバー送信・購読管理）は未実装です。
