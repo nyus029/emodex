@@ -60,11 +60,11 @@ export default function Home() {
       (await navigator.serviceWorker.getRegistration('/')) ||
       (await navigator.serviceWorker.register('/push-sw.js'));
 
-    if (!registration.active && navigator.serviceWorker.ready) {
-      await navigator.serviceWorker.ready;
-    }
+    const readyRegistration = registration.active
+      ? registration
+      : await navigator.serviceWorker.ready;
 
-    registration.active?.postMessage({
+    readyRegistration.active?.postMessage({
       type: 'SHOW_NOTIFICATION',
       payload: {
         title: 'PWA通知 (Service Worker)',
