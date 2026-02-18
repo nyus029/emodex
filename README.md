@@ -88,6 +88,14 @@ npm run db:studio
 npm run dev
 ```
 
+## フロントエンド構成 (App Router 3 層)
+
+- `app/**/page.tsx`: ルーティング専用。対応する Feature コンポーネントをそのまま返す。
+- `features/**`: 画面単位のルートコンポーネント（`XxxFeature.tsx`）。状態管理やユースケース制御を担い、`components` を組み合わせて UI を構成する。
+- `components/**`: 再利用可能な純粋 UI 部品。ビジネスフローの起点にはならず、features からのみ利用する（components → features の逆依存は禁止）。
+
+新規ページを作る場合は `features/<page>/XxxFeature.tsx` を追加し、`app/**/page.tsx` で委譲してください。UI 部品は `components/` に配置します。
+
 ## Mastra チャット (最小構成)
 
 DB モデル追加なしで、Next.js 上で Mastra を stream チャットとして動作させる最小実装を入れています。
