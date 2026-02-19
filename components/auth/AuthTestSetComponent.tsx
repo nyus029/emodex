@@ -15,9 +15,7 @@ export default function AuthTestSetComponent() {
         ログイン・ログアウトとプロフィール表示の動作確認用です。
       </p>
 
-      {isLoading && (
-        <p className="auth-test-loading">認証状態を取得中...</p>
-      )}
+      {isLoading && <p className="auth-test-loading">認証状態を取得中...</p>}
 
       {!isLoading && !user && (
         <section className="auth-test-section">
