@@ -4,6 +4,7 @@ import { FormEvent, useState } from 'react';
 import ChatForm from '@/components/chat/ChatForm';
 import ChatResponse from '@/components/chat/ChatResponse';
 import NotificationTest from '@/components/notification/NotificationTest';
+import AuthTestSetComponent from '@/components/auth/AuthTestSetComponent';
 
 const isPwaStandalone = () => {
   if (typeof window === 'undefined') return false;
@@ -129,6 +130,7 @@ export default function HomeFeature() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-6 px-6 py-10">
+      <AuthTestSetComponent />
       <h1 className="text-2xl font-bold">Mastra Stream Chat (Local MVP)</h1>
       <p className="text-sm text-zinc-600 dark:text-zinc-300">
         OPENAI_API_KEY が未設定でもモックで stream 表示できます。

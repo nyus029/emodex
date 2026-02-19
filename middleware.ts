@@ -1,19 +1,19 @@
+import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
+import { auth0 } from './lib/auth0';
 
-// Block production traffic until the pre-release lock is lifted via env toggle.
 const isProduction = process.env.VERCEL_ENV === 'production';
 const isPreReleaseLocked = process.env.PRE_RELEASE_LOCK !== 'false';
 
-export function middleware() {
-  if (!isProduction || !isPreReleaseLocked) {
-    return NextResponse.next();
+export async function middleware(request: NextRequest) {
+  if (isProduction && isPreReleaseLocked) {
+    return new NextResponse('Forbidden', { status: 403 });
   }
-
-  return new NextResponse('Forbidden', { status: 403 });
+  return await auth0.middleware(request);
 }
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|_next/data|favicon.ico|icon|apple-icon|manifest.webmanifest|sw\\.js|api/health|api/health/db).*)',
+    '/((?!_next/static|_next/image|_next/data|favicon.ico|icon|apple-icon|manifest.webmanifest|sw\\.js|api/health|api/health/db|sitemap.xml|robots.txt).*)',
   ],
 };
