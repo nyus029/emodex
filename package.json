@@ -2,6 +2,7 @@
   "name": "emodex",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "npm@11.4.2",
   "engines": {
     "node": ">=22.12.0"
   },
