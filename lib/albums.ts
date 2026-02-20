@@ -64,7 +64,7 @@ export type AlbumListItem = {
   photoStorageCount: number;
 };
 
-function toTagArray(tags: Prisma.JsonValue | null): string[] {
+export function toTagArray(tags: Prisma.JsonValue | null): string[] {
   if (!Array.isArray(tags)) {
     return [];
   }
