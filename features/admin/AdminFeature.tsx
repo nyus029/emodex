@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import AuthTestSetComponent from '@/components/auth/AuthTestSetComponent';
+import AdminEmoSection from '@/features/admin/AdminEmoSection';
 
 type AdminOverviewResponse = {
   generatedAt: string;
@@ -524,6 +525,8 @@ export default function AdminFeature() {
               </table>
             </div>
           </section>
+
+          <AdminEmoSection />
         </>
       ) : null}
     </main>

@@ -1,2 +1,2 @@
-GRANT CREATE, DROP ON *.* TO 'emodex'@'%';
+GRANT ALL PRIVILEGES ON *.* TO 'emodex'@'%';
 FLUSH PRIVILEGES;

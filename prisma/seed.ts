@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { prisma } from '../lib/prisma';
+import { calculatePhotoStorageEmo } from '../lib/emo-value';
 
 const MOCK_USERS = [
   { email: 'user-1@example.com', name: 'User One' },
@@ -98,6 +99,12 @@ async function main() {
     });
   }
 
+  const now = new Date();
+  const thirtyDaysAgo = new Date(now);
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const sevenDaysFromNow = new Date(now);
+  sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+
   const seedAlbums = [
     {
       name: 'Seed Family Album',
@@ -105,6 +112,8 @@ async function main() {
       userId: 'auth0|seed-user-family',
       requiredAtAlbumCreation: false,
       createdTags: ['family', 'travel'],
+      plannedDividend: sevenDaysFromNow,
+      compoundStartDate: thirtyDaysAgo,
       storages: [
         {
           name: 'day-1',
@@ -136,6 +145,8 @@ async function main() {
       userId: 'auth0|seed-user-event',
       requiredAtAlbumCreation: true,
       createdTags: ['event', 'friends'],
+      plannedDividend: null as Date | null,
+      compoundStartDate: thirtyDaysAgo,
       storages: [
         {
           name: 'opening',
@@ -163,6 +174,7 @@ async function main() {
         rootPath: albumSeed.rootPath,
         createdTags: albumSeed.createdTags,
         requiredAtAlbumCreation: albumSeed.requiredAtAlbumCreation,
+        plannedDividend: albumSeed.plannedDividend,
       },
       create: {
         name: albumSeed.name,
@@ -170,6 +182,7 @@ async function main() {
         rootPath: albumSeed.rootPath,
         createdTags: albumSeed.createdTags,
         requiredAtAlbumCreation: albumSeed.requiredAtAlbumCreation,
+        plannedDividend: albumSeed.plannedDividend,
       },
     });
 
@@ -189,6 +202,7 @@ async function main() {
           storagePath: storageSeed.storagePath,
           photoCount: storageSeed.files.length,
           totalSizeBytes: BigInt(totalSizeBytes),
+          compoundStartDate: albumSeed.compoundStartDate,
         },
         create: {
           albumId: album.id,
@@ -196,6 +210,7 @@ async function main() {
           storagePath: storageSeed.storagePath,
           photoCount: storageSeed.files.length,
           totalSizeBytes: BigInt(totalSizeBytes),
+          compoundStartDate: albumSeed.compoundStartDate,
         },
       });
 
@@ -212,6 +227,32 @@ async function main() {
           sizeBytes: BigInt(file.sizeBytes),
         })),
       });
+
+      // Generate 30 days of EmoSnapshot history
+      await prisma.emoSnapshot.deleteMany({
+        where: { photoStorageId: photoStorage.id },
+      });
+      const snapshotData = [];
+      for (let d = 0; d < 30; d++) {
+        const snapshotDate = new Date(albumSeed.compoundStartDate);
+        snapshotDate.setDate(snapshotDate.getDate() + d);
+        snapshotDate.setHours(0, 0, 0, 0);
+
+        const emoValue = calculatePhotoStorageEmo({
+          photoCount: storageSeed.files.length,
+          baseEmoPerPhoto: 100,
+          compoundStartDate: albumSeed.compoundStartDate,
+          isCompoundActive: true,
+          asOfDate: snapshotDate,
+        });
+
+        snapshotData.push({
+          photoStorageId: photoStorage.id,
+          snapshotDate,
+          emoValue,
+        });
+      }
+      await prisma.emoSnapshot.createMany({ data: snapshotData });
     }
   }
 
