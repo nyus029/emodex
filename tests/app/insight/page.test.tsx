@@ -3,7 +3,7 @@
  */
 
 import { render, screen } from '@testing-library/react';
-import InsightPage from '@/app/insight/page';
+import InsightPage from '@/app/test/insight/page';
 
 jest.mock('@/features/graph/GraphFeature', () => ({
   __esModule: true,
