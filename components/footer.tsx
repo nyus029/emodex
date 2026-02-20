@@ -17,7 +17,7 @@ const navItems = [
   },
   {
     name: 'INVEST',
-    href: '/invest',
+    href: '/invests',
     icon: '/invest.svg',
   },
   {
