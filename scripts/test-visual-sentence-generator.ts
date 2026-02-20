@@ -22,7 +22,10 @@ async function visualTest() {
       if (!sentenceFromWordsTool.execute) {
         throw new Error('Tool execute method is not defined');
       }
-      const result = await sentenceFromWordsTool.execute({ words }, {} as any);
+      const result = await sentenceFromWordsTool.execute(
+        { words },
+        {} as Parameters<NonNullable<typeof sentenceFromWordsTool.execute>>[1],
+      );
 
       if ('error' in result) {
         throw new Error(`Validation Error: ${result.message}`);
