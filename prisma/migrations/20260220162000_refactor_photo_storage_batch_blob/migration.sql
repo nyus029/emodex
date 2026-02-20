@@ -192,6 +192,10 @@ INNER JOIN `PhotoStorageMigrationMap` map
     ELSE REGEXP_REPLACE(old.`storageKey`, '/[^/]+$', '')
   END;
 
+-- Drop the legacy FK from the renamed table before re-creating it on the new table
+-- (MySQL keeps FK constraint names globally; RENAME TABLE does not remove them)
+ALTER TABLE `PhotoStorage_old` DROP FOREIGN KEY `PhotoStorage_albumId_fkey`;
+
 ALTER TABLE `PhotoStorage`
   ADD CONSTRAINT `PhotoStorage_albumId_fkey`
   FOREIGN KEY (`albumId`) REFERENCES `Album`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
