@@ -704,6 +704,37 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AlbumInsightResponse'
+  /api/v1/sentences:
+    post:
+      tags:
+        - Sentences
+      summary: Generate a sentence from words
+      description: Uses LLM to create a natural Japanese sentence containing all the provided words.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SentenceRequest'
+      responses:
+        '200':
+          description: Generated sentence
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SentenceResponse'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error or LLM service failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
   schemas:
     HealthResponse:
@@ -1085,3 +1116,33 @@ components:
           type: number
           format: float
           example: 1.49
+    SentenceRequest:
+      type: object
+      required:
+        - words
+      properties:
+        words:
+          type: array
+          items:
+            type: string
+          example:
+            - 猫
+            - 走る
+            - 公園
+    SentenceResponse:
+      type: object
+      properties:
+        sentence:
+          type: string
+          example: 公園で元気よく猫が走る様子を眺めていた。
+        wordCount:
+          type: integer
+          example: 3
+        usedWords:
+          type: array
+          items:
+            type: string
+          example:
+            - 猫
+            - 走る
+            - 公園
