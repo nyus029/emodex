@@ -15,6 +15,8 @@ model User {
   updatedAt DateTime @updatedAt
   memberships Membership[]
   adminGroups Group[] @relation("GroupAdmin")
+  systemAdministrator SystemAdministrator?
+  createdSystemAdministrators SystemAdministrator[] @relation("SystemAdministratorCreatedBy")
 }
 
 model Group {
@@ -85,4 +87,13 @@ model PhotoStoragePhoto {
   createdAt      DateTime     @default(now())
 
   @@index([photoStorageId, createdAt])
+}
+
+model SystemAdministrator {
+  id              String  @id @default(cuid())
+  userId          Int     @unique
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdByUserId Int?
+  createdByUser   User?   @relation("SystemAdministratorCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdAt       DateTime @default(now())
 }
