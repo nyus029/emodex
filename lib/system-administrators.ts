@@ -13,7 +13,9 @@ type PrismaWithSystemAdministrator = typeof prisma & {
 function hasSystemAdministratorDelegate(
   client: typeof prisma,
 ): client is PrismaWithSystemAdministrator {
-  return 'systemAdministrator' in (client as Record<string, unknown>);
+  return (
+    'systemAdministrator' in (client as unknown as Record<string, unknown>)
+  );
 }
 
 function readBootstrapEmails(): Set<string> {
@@ -23,6 +25,13 @@ function readBootstrapEmails(): Set<string> {
     .map((value) => value.trim().toLowerCase())
     .filter(Boolean);
   return new Set(values);
+}
+
+function toCount(value: bigint | number | null | undefined): number {
+  if (typeof value === 'bigint') {
+    return Number(value);
+  }
+  return Number(value ?? 0);
 }
 
 export async function getSystemAdministratorAccessByEmail(email: string) {
@@ -60,7 +69,7 @@ export async function getSystemAdministratorAccessByEmail(email: string) {
         `,
       ]).then(([rows, countRows]) => [
         rows[0] ?? null,
-        Number(countRows[0]?.count ?? 0n),
+        toCount(countRows[0]?.count),
       ]);
 
   const isRegisteredAdmin = Boolean(existingAdmin);
@@ -182,7 +191,7 @@ export async function countSystemAdministrators(): Promise<number> {
     SELECT COUNT(*) AS count
     FROM SystemAdministrator
   `;
-  return Number(rows[0]?.count ?? 0n);
+  return toCount(rows[0]?.count);
 }
 
 export async function createSystemAdministrator(
