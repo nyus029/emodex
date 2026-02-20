@@ -1,4 +1,4 @@
-import { sentenceFromWordsTool } from '../tools/sentence-from-words-tool';
+import { sentenceFromWordsTool } from '../mastra/tools/sentence-from-words-tool';
 
 async function visualTest() {
   console.log('\n===========================================');
@@ -19,7 +19,15 @@ async function visualTest() {
     console.log('-'.repeat(50));
 
     try {
-      const result = await sentenceFromWordsTool.execute({ words });
+      if (!sentenceFromWordsTool.execute) {
+        throw new Error('Tool execute method is not defined');
+      }
+      const result = await sentenceFromWordsTool.execute({ words }, {} as any);
+
+      if ('error' in result) {
+        throw new Error(`Validation Error: ${result.message}`);
+      }
+
       console.log(`✅ 成功！`);
       console.log(`   文章: "${result.sentence}"`);
       console.log(`   単語数: ${result.wordCount}`);

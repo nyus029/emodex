@@ -14,14 +14,26 @@ export async function POST(request: NextRequest) {
     }
 
     // Execute the tool with the provided words
-    const result = await sentenceFromWordsTool.execute({ words });
+    if (!sentenceFromWordsTool.execute) {
+      throw new Error('Tool execute method is not defined');
+    }
+
+    const result = await sentenceFromWordsTool.execute({ words }, {} as any);
+
+    if ('error' in result && result.error === true) {
+      return NextResponse.json(result, { status: 400 });
+    }
 
     return NextResponse.json(result);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in sentence generation API:', error);
 
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+    const errorStatus = (error as { status?: number })?.status;
+
     // Handle potential authentication errors from Anthropic
-    if (error?.status === 401 || error?.message?.includes('api-key')) {
+    if (errorStatus === 401 || errorMessage.includes('api-key')) {
       return NextResponse.json(
         { error: 'LLM service authentication failed. Please check API keys.' },
         { status: 500 },
@@ -29,7 +41,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: 'Internal Server Error', details: error?.message },
+      { error: 'Internal Server Error', details: errorMessage },
       { status: 500 },
     );
   }
