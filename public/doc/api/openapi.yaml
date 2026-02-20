@@ -711,11 +711,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/albums/insight:
+    get:
+      tags:
+        - Albums
+      summary: Get insight overview for all accessible albums
+      description: Returns total emo value and per-album emo values with day-over-day changes.
+      responses:
+        '200':
+          description: Insight overview
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InsightOverviewResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/albums/insight/{id}:
     get:
       tags:
         - Albums
-      summary: Get album insight
+      summary: Get album insight with emo value
+      description: Returns album basic info and calculated emo value with compound interest.
       parameters:
         - name: id
           in: path
@@ -730,6 +750,143 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AlbumInsightResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Album not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/albums/{id}/dividend:
+    post:
+      tags:
+        - Albums
+      summary: Execute dividend action
+      description: Execute a dividend reinvest or receive action on an album that has reached its planned dividend date.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Album identifier
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DividendActionRequest'
+      responses:
+        '200':
+          description: Dividend action executed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DividendActionResponse'
+        '400':
+          description: Invalid request or dividend date not reached
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Album not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/albums/{id}/chart:
+    get:
+      tags:
+        - Albums
+      summary: Get album emo value chart data
+      description: Returns time-series emo value data aggregated from EmoSnapshots with on-demand today calculation.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Album identifier
+          schema:
+            type: string
+        - name: period
+          in: query
+          required: false
+          description: Chart period
+          schema:
+            type: string
+            enum:
+              - 1W
+              - 1M
+              - 3M
+              - 1Y
+              - ALL
+            default: 1M
+      responses:
+        '200':
+          description: Chart data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChartDataResponse'
+        '400':
+          description: Invalid period
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Album not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/cron/emo-snapshots:
+    get:
+      tags:
+        - Cron
+      summary: Daily emo snapshot batch
+      description: Calculates and upserts emo snapshots for all active photo storages. Protected by CRON_SECRET.
+      responses:
+        '200':
+          description: Snapshots created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  snapshotsUpserted:
+                    type: integer
+                    example: 42
+                  date:
+                    type: string
+                    format: date
+                    example: '2026-02-21'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/groups:
     get:
       tags:
@@ -1236,19 +1393,29 @@ components:
       properties:
         albumBasicInfo:
           type: object
+          required:
+            - name
+            - createdAt
+            - plannedDividend
           properties:
             name:
               type: string
-              example: Album 123
+              example: Family Album
             createdAt:
               type: string
               format: date
               example: '2026-02-01'
-            dividend:
-              type: string
-              example: ¥1,250
+            plannedDividend:
+              type:
+                - string
+                - 'null'
+              format: date-time
+              example: '2026-03-31T00:00:00.000Z'
         emoValueInfo:
           type: object
+          required:
+            - emoValue
+            - dayOverDayChange
           properties:
             emoValue:
               type: number
@@ -1257,6 +1424,9 @@ components:
               $ref: '#/components/schemas/EmoValueChange'
     EmoValueChange:
       type: object
+      required:
+        - value
+        - percentage
       properties:
         value:
           type: number
@@ -1265,6 +1435,88 @@ components:
           type: number
           format: float
           example: 1.49
+    DividendActionRequest:
+      type: object
+      required:
+        - action
+      properties:
+        action:
+          type: string
+          enum:
+            - REINVEST
+            - RECEIVE
+    DividendActionResponse:
+      type: object
+      required:
+        - action
+        - processedStorages
+        - events
+      properties:
+        action:
+          type: string
+          enum:
+            - REINVEST
+            - RECEIVE
+        processedStorages:
+          type: integer
+          example: 2
+        events:
+          type: array
+          items:
+            type: object
+            required:
+              - id
+              - photoStorageId
+              - emoValueAtEvent
+              - previousBaseEmo
+              - newBaseEmo
+            properties:
+              id:
+                type: string
+                example: evt_123
+              photoStorageId:
+                type: string
+                example: ps_123
+              emoValueAtEvent:
+                type: number
+                example: 1500.5
+              previousBaseEmo:
+                type: integer
+                example: 100
+              newBaseEmo:
+                type: integer
+                example: 200
+    ChartDataResponse:
+      type: object
+      required:
+        - period
+        - data
+      properties:
+        period:
+          type: string
+          enum:
+            - 1W
+            - 1M
+            - 3M
+            - 1Y
+            - ALL
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChartDataPoint'
+    ChartDataPoint:
+      type: object
+      required:
+        - time
+        - value
+      properties:
+        time:
+          type: string
+          format: date
+          example: '2026-02-21'
+        value:
+          type: number
+          example: 8500
     SentenceRequest:
       type: object
       required:
@@ -1295,3 +1547,47 @@ components:
             - 猫
             - 走る
             - 公園
+    InsightOverviewResponse:
+      type: object
+      required:
+        - totalEmoValue
+        - totalDayOverDayChange
+        - albums
+      properties:
+        totalEmoValue:
+          type: number
+          example: 25000.5
+        totalDayOverDayChange:
+          $ref: '#/components/schemas/EmoValueChange'
+        albums:
+          type: array
+          items:
+            $ref: '#/components/schemas/InsightAlbumItem'
+    InsightAlbumItem:
+      type: object
+      required:
+        - id
+        - name
+        - albumType
+        - groupName
+        - emoValue
+        - dayOverDayChange
+      properties:
+        id:
+          type: string
+          example: abc123
+        name:
+          type: string
+          example: 家族アルバム
+        albumType:
+          $ref: '#/components/schemas/AlbumType'
+        groupName:
+          type:
+            - string
+            - 'null'
+          example: null
+        emoValue:
+          type: number
+          example: 8500
+        dayOverDayChange:
+          $ref: '#/components/schemas/EmoValueChange'

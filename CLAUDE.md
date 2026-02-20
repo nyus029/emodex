@@ -66,9 +66,10 @@ emodex/
 │       ├── chat/stream/      # POST /api/chat/stream — Mastra streaming chat
 │       ├── docs/             # GET /api/docs — Swagger UI
 │       ├── groups/           # Groups & memberships CRUD
+│       ├── cron/emo-snapshots/ # GET /api/cron/emo-snapshots — daily emo snapshot batch
 │       ├── health/           # GET /api/health, /api/health/db
 │       ├── users/verify/     # GET /api/users/verify/:email
-│       └── v1/albums/        # Album endpoints (overview, insight)
+│       └── v1/albums/        # Album endpoints (overview, insight, chart, dividend)
 │
 ├── features/                 # Screen-level components (state + use-case logic)
 │   ├── home/HomeFeature.tsx
@@ -171,6 +172,9 @@ APP_BASE_URL=http://localhost:3000
 
 # Optional Mastra Cloud observability
 MASTRA_CLOUD_ACCESS_TOKEN=
+
+# Vercel Cron secret for /api/cron/* endpoints
+CRON_SECRET=
 ```
 
 `chatAgent` uses `OPENAI_MODEL` (default `openai/gpt-5-codex`). If `OPENAI_API_KEY` is absent, `POST /api/chat/stream` returns a hardcoded mock stream.
@@ -298,6 +302,18 @@ Mastra is configured with:
 - In browser: uses `Notification` API directly
 - In PWA: posts `SHOW_NOTIFICATION` message to Service Worker
 - Web Push infrastructure (VAPID, subscription management) is not yet implemented
+
+---
+
+## Cron Jobs
+
+| Job           | Schedule    | Endpoint                      | Description                                                                    |
+| ------------- | ----------- | ----------------------------- | ------------------------------------------------------------------------------ |
+| Emo Snapshots | Daily 00:00 | `GET /api/cron/emo-snapshots` | Calculates and upserts daily emo value snapshots for all active photo storages |
+
+- Configured in `vercel.json` for Vercel Cron
+- Protected by `Authorization: Bearer ${CRON_SECRET}` header
+- Idempotent: uses upsert keyed on `(photoStorageId, snapshotDate)`
 
 ---
 

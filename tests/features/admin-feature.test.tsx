@@ -10,6 +10,11 @@ jest.mock('@/components/auth/AuthTestSetComponent', () => ({
   default: () => <div>AuthTestSetComponentMock</div>,
 }));
 
+jest.mock('@/features/admin/AdminEmoSection', () => ({
+  __esModule: true,
+  default: () => <div>AdminEmoSectionMock</div>,
+}));
+
 function createJsonResponse(data: unknown, status = 200) {
   return {
     ok: status >= 200 && status < 300,
