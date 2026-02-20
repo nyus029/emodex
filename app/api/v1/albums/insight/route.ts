@@ -1,19 +1,15 @@
-import { NextResponse } from 'next/server';
-import { auth0 } from '@/lib/auth0';
 import { prisma } from '@/lib/prisma';
 import {
   calculateAlbumEmo,
   calculateDayOverDayChange,
   type StorageParams,
 } from '@/lib/emo-value';
+import { requireAuth, jsonSuccess, roundEmo } from '@/lib/api-utils';
 
 export async function GET() {
-  const session = await auth0.getSession();
-  const userId = session?.user?.sub;
-  const userEmail = session?.user?.email as string | undefined;
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth();
+  if (auth.error) return auth.error;
+  const { userId, userEmail } = auth.session;
 
   const ownAlbums = await prisma.album.findMany({
     where: { userId },
@@ -70,38 +66,25 @@ export async function GET() {
   }
 
   const allAlbums = [...ownAlbums, ...sharedAlbums];
-  const allStorages: StorageParams[] = allAlbums.flatMap((a) =>
-    a.photoStorages.map((ps) => ({
-      photoCount: ps.photoCount,
-      baseEmoPerPhoto: ps.baseEmoPerPhoto,
-      compoundStartDate: ps.compoundStartDate,
-      isCompoundActive: ps.isCompoundActive,
-    })),
+  const allStorages: StorageParams[] = allAlbums.flatMap(
+    (a) => a.photoStorages,
   );
 
-  const totalEmoValue = Math.round(calculateAlbumEmo(allStorages) * 100) / 100;
+  const totalEmoValue = roundEmo(calculateAlbumEmo(allStorages));
   const totalDayOverDayChange = calculateDayOverDayChange(allStorages);
 
   const albums = allAlbums.map((album) => {
-    const storages: StorageParams[] = album.photoStorages.map((ps) => ({
-      photoCount: ps.photoCount,
-      baseEmoPerPhoto: ps.baseEmoPerPhoto,
-      compoundStartDate: ps.compoundStartDate,
-      isCompoundActive: ps.isCompoundActive,
-    }));
+    const storages: StorageParams[] = album.photoStorages;
 
     return {
       id: album.id,
       name: album.name,
       albumType: album.albumType,
       groupName: album.group?.groupName ?? null,
-      emoValue: Math.round(calculateAlbumEmo(storages) * 100) / 100,
+      emoValue: roundEmo(calculateAlbumEmo(storages)),
       dayOverDayChange: calculateDayOverDayChange(storages),
     };
   });
 
-  return NextResponse.json(
-    { totalEmoValue, totalDayOverDayChange, albums },
-    { status: 200 },
-  );
+  return jsonSuccess({ totalEmoValue, totalDayOverDayChange, albums });
 }

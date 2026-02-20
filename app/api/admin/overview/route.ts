@@ -1,25 +1,10 @@
-import { NextResponse } from 'next/server';
-import { auth0 } from '@/lib/auth0';
 import { prisma } from '@/lib/prisma';
-import {
-  getSystemAdministratorAccessByEmail,
-  listSystemAdministrators,
-} from '@/lib/system-administrators';
+import { listSystemAdministrators } from '@/lib/system-administrators';
+import { requireAdminAuth, jsonSuccess } from '@/lib/api-utils';
 
 export async function GET() {
-  const session = await auth0.getSession();
-  const email = session?.user?.email;
-  if (!email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const access = await getSystemAdministratorAccessByEmail(email);
-  if (!access.currentUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  if (!access.hasAccess) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  const admin = await requireAdminAuth();
+  if (admin.error) return admin.error;
 
   const [users, groups, albums, systemAdministrators] = await Promise.all([
     prisma.user.findMany({
@@ -84,11 +69,11 @@ export async function GET() {
   const payload = {
     generatedAt: new Date().toISOString(),
     currentUser: {
-      id: access.currentUser.id,
-      name: access.currentUser.name,
-      email: access.currentUser.email,
-      isRegisteredAdmin: access.isRegisteredAdmin,
-      isBootstrapAdmin: access.isBootstrapAdmin,
+      id: admin.currentUser.id,
+      name: admin.currentUser.name,
+      email: admin.currentUser.email,
+      isRegisteredAdmin: admin.isRegisteredAdmin,
+      isBootstrapAdmin: admin.isBootstrapAdmin,
     },
     systemAdministrators: systemAdministrators.map((admin) => ({
       id: admin.id,
@@ -153,5 +138,5 @@ export async function GET() {
     }),
   };
 
-  return NextResponse.json(payload, { status: 200 });
+  return jsonSuccess(payload);
 }

@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server';
-import { auth0 } from '@/lib/auth0';
 import { prisma } from '@/lib/prisma';
 import { findAccessibleAlbum } from '@/lib/album-access';
 import { calculateAlbumEmo, type StorageParams } from '@/lib/emo-value';
+import { requireAuth, jsonSuccess, jsonError, roundEmo } from '@/lib/api-utils';
+import type { RouteContext } from '@/types/api';
 
 const PERIOD_DAYS: Record<string, number> = {
   '1W': 7,
@@ -11,29 +11,25 @@ const PERIOD_DAYS: Record<string, number> = {
   '1Y': 365,
 };
 
-type RouteContext = {
-  params: Promise<{ id: string }>;
-};
-
-export async function GET(request: Request, context: RouteContext) {
-  const session = await auth0.getSession();
-  const userId = session?.user?.sub;
-  const userEmail = session?.user?.email as string | undefined;
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+export async function GET(
+  request: Request,
+  context: RouteContext<{ id: string }>,
+) {
+  const auth = await requireAuth();
+  if (auth.error) return auth.error;
+  const { userId, userEmail } = auth.session;
 
   const { id } = await context.params;
 
   const album = await findAccessibleAlbum(id, userId, userEmail ?? '');
   if (!album) {
-    return NextResponse.json({ error: 'Album not found' }, { status: 404 });
+    return jsonError('Album not found', 404);
   }
 
   const url = new URL(request.url);
   const period = url.searchParams.get('period') ?? '1M';
   if (!['1W', '1M', '3M', '1Y', 'ALL'].includes(period)) {
-    return NextResponse.json({ error: 'Invalid period' }, { status: 400 });
+    return jsonError('Invalid period', 400);
   }
 
   const now = new Date();
@@ -69,7 +65,7 @@ export async function GET(request: Request, context: RouteContext) {
 
   const data = Array.from(aggregated.entries()).map(([time, value]) => ({
     time,
-    value: Math.round(value * 100) / 100,
+    value: roundEmo(value),
   }));
 
   const photoStorages = await prisma.photoStorage.findMany({
@@ -81,12 +77,7 @@ export async function GET(request: Request, context: RouteContext) {
       isCompoundActive: true,
     },
   });
-  const storages: StorageParams[] = photoStorages.map((ps) => ({
-    photoCount: ps.photoCount,
-    baseEmoPerPhoto: ps.baseEmoPerPhoto,
-    compoundStartDate: ps.compoundStartDate,
-    isCompoundActive: ps.isCompoundActive,
-  }));
+  const storages: StorageParams[] = photoStorages;
 
   const todayStr = now.toISOString().split('T')[0];
   const todayValue = calculateAlbumEmo(storages, now);
@@ -94,9 +85,9 @@ export async function GET(request: Request, context: RouteContext) {
   if (!lastEntry || lastEntry.time !== todayStr) {
     data.push({
       time: todayStr,
-      value: Math.round(todayValue * 100) / 100,
+      value: roundEmo(todayValue),
     });
   }
 
-  return NextResponse.json({ period, data }, { status: 200 });
+  return jsonSuccess({ period, data });
 }

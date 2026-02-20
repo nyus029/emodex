@@ -1,11 +1,15 @@
-import { NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
 import { z } from 'zod';
-import { auth0 } from '@/lib/auth0';
 import { prisma } from '@/lib/prisma';
-import { toAlbumResponse } from '@/lib/albums';
+import { toAlbumResponse, toTagArray } from '@/lib/albums';
 import type { AlbumListItem } from '@/lib/albums';
 import { toPathSegment } from '@/lib/path';
+import {
+  requireAuth,
+  parseBody,
+  jsonSuccess,
+  jsonError,
+  isPrismaUniqueConstraintError,
+} from '@/lib/api-utils';
 
 const createAlbumSchema = z
   .object({
@@ -25,12 +29,9 @@ const createAlbumSchema = z
   );
 
 export async function GET() {
-  const session = await auth0.getSession();
-  const userId = session?.user?.sub;
-  const userEmail = session?.user?.email as string | undefined;
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth();
+  if (auth.error) return auth.error;
+  const { userId, userEmail } = auth.session;
 
   const ownAlbums = await prisma.album.findMany({
     where: { userId },
@@ -72,11 +73,6 @@ export async function GET() {
     }
   }
 
-  const toTagArray = (tags: Prisma.JsonValue | null): string[] => {
-    if (!Array.isArray(tags)) return [];
-    return tags.filter((tag): tag is string => typeof tag === 'string');
-  };
-
   const toListItem = (album: (typeof ownAlbums)[number]): AlbumListItem => ({
     id: album.id,
     name: album.name,
@@ -93,26 +89,17 @@ export async function GET() {
     ...sharedAlbums.map(toListItem),
   ];
 
-  return NextResponse.json(albums, { status: 200 });
+  return jsonSuccess(albums);
 }
 
 export async function POST(request: Request) {
-  const session = await auth0.getSession();
-  const userId = session?.user?.sub;
-  const userEmail = session?.user?.email as string | undefined;
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth();
+  if (auth.error) return auth.error;
+  const { userId, userEmail } = auth.session;
 
   const rawBody = (await request.json().catch(() => null)) as unknown;
-  const parsed = createAlbumSchema.safeParse(rawBody);
-
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: 'Invalid request body', details: parsed.error.flatten() },
-      { status: 400 },
-    );
-  }
+  const parsed = parseBody(rawBody, createAlbumSchema);
+  if (parsed.error) return parsed.error;
 
   const {
     name,
@@ -127,10 +114,7 @@ export async function POST(request: Request) {
 
   if (resolvedAlbumType === 'SHARED' && groupId) {
     if (!userEmail) {
-      return NextResponse.json(
-        { error: 'Unable to verify group membership' },
-        { status: 400 },
-      );
+      return jsonError('Unable to verify group membership', 400);
     }
 
     const dbUser = await prisma.user.findUnique({
@@ -139,10 +123,7 @@ export async function POST(request: Request) {
     });
 
     if (!dbUser) {
-      return NextResponse.json(
-        { error: 'User not found in database' },
-        { status: 404 },
-      );
+      return jsonError('User not found in database', 404);
     }
 
     const membership = await prisma.membership.findUnique({
@@ -152,10 +133,7 @@ export async function POST(request: Request) {
     });
 
     if (!membership) {
-      return NextResponse.json(
-        { error: 'You are not a member of this group' },
-        { status: 403 },
-      );
+      return jsonError('You are not a member of this group', 403);
     }
   }
 
@@ -183,26 +161,16 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json(toAlbumResponse(album), { status: 201 });
+    return jsonSuccess(toAlbumResponse(album), 201);
   } catch (error) {
-    const isUniqueConstraintError =
-      (error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002') ||
-      (typeof error === 'object' &&
-        error !== null &&
-        'code' in error &&
-        error.code === 'P2002');
-    if (isUniqueConstraintError) {
-      return NextResponse.json(
-        { error: '同じアルバム名（またはルートパス）が既に存在します' },
-        { status: 409 },
+    if (isPrismaUniqueConstraintError(error)) {
+      return jsonError(
+        '同じアルバム名（またはルートパス）が既に存在します',
+        409,
       );
     }
 
     console.error('Failed to create album', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 },
-    );
+    return jsonError('Internal server error', 500);
   }
 }

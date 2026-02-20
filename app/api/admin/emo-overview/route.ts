@@ -1,27 +1,14 @@
-import { NextResponse } from 'next/server';
-import { auth0 } from '@/lib/auth0';
 import { prisma } from '@/lib/prisma';
-import { getSystemAdministratorAccessByEmail } from '@/lib/system-administrators';
 import {
   calculatePhotoStorageEmo,
   calculateAlbumEmo,
   calculateDayOverDayChange,
 } from '@/lib/emo-value';
+import { requireAdminAuth, jsonSuccess, roundEmo } from '@/lib/api-utils';
 
 export async function GET() {
-  const session = await auth0.getSession();
-  const email = session?.user?.email;
-  if (!email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const access = await getSystemAdministratorAccessByEmail(email);
-  if (!access.currentUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  if (!access.hasAccess) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  const admin = await requireAdminAuth();
+  if (admin.error) return admin.error;
 
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -69,15 +56,9 @@ export async function GET() {
   let totalEmoValue = 0;
 
   const albumsPayload = albums.map((album) => {
-    const storageParams = album.photoStorages.map((s) => ({
-      photoCount: s.photoCount,
-      baseEmoPerPhoto: s.baseEmoPerPhoto,
-      compoundStartDate: s.compoundStartDate,
-      isCompoundActive: s.isCompoundActive,
-    }));
+    const storageParams = album.photoStorages;
 
-    const currentEmoValue =
-      Math.round(calculateAlbumEmo(storageParams) * 100) / 100;
+    const currentEmoValue = roundEmo(calculateAlbumEmo(storageParams));
     totalEmoValue += currentEmoValue;
 
     const dayOverDayChange = calculateDayOverDayChange(storageParams);
@@ -94,41 +75,33 @@ export async function GET() {
         baseEmoPerPhoto: s.baseEmoPerPhoto,
         compoundStartDate: s.compoundStartDate.toISOString(),
         isCompoundActive: s.isCompoundActive,
-        currentEmoValue:
-          Math.round(
-            calculatePhotoStorageEmo({
-              photoCount: s.photoCount,
-              baseEmoPerPhoto: s.baseEmoPerPhoto,
-              compoundStartDate: s.compoundStartDate,
-              isCompoundActive: s.isCompoundActive,
-            }) * 100,
-          ) / 100,
+        currentEmoValue: roundEmo(calculatePhotoStorageEmo(s)),
       })),
     };
   });
 
   const payload = {
     generatedAt: new Date().toISOString(),
-    totalEmoValue: Math.round(totalEmoValue * 100) / 100,
+    totalEmoValue: roundEmo(totalEmoValue),
     albums: albumsPayload,
     recentSnapshots: recentSnapshots.map((s) => ({
       photoStorageId: s.photoStorageId,
       photoStorageName: s.photoStorage.name,
       albumName: s.photoStorage.album.name,
       snapshotDate: s.snapshotDate.toISOString().split('T')[0],
-      emoValue: Math.round(s.emoValue * 100) / 100,
+      emoValue: roundEmo(s.emoValue),
     })),
     recentDividendEvents: recentDividendEvents.map((e) => ({
       id: e.id,
       albumName: e.album.name,
       photoStorageName: e.photoStorage.name,
       action: e.action,
-      emoValueAtEvent: Math.round(e.emoValueAtEvent * 100) / 100,
+      emoValueAtEvent: roundEmo(e.emoValueAtEvent),
       previousBaseEmo: e.previousBaseEmo,
       newBaseEmo: e.newBaseEmo,
       executedAt: e.executedAt.toISOString(),
     })),
   };
 
-  return NextResponse.json(payload, { status: 200 });
+  return jsonSuccess(payload);
 }

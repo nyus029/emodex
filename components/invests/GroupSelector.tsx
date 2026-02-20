@@ -1,7 +1,4 @@
-type GroupItem = {
-  groupId: number;
-  groupName: string;
-};
+import type { GroupItem } from '@/types/api';
 
 type GroupSelectorProps = {
   groups: GroupItem[];

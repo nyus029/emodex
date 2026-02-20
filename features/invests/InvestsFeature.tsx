@@ -12,11 +12,7 @@ import InvestResult from '@/components/invests/InvestResult';
 import type { AlbumListItem, AlbumResponse } from '@/lib/albums';
 import { toPathSegment } from '@/lib/path';
 import { generateStorageName } from '@/lib/invest';
-
-type GroupItem = {
-  groupId: number;
-  groupName: string;
-};
+import type { GroupItem } from '@/types/api';
 
 export default function InvestsFeature() {
   const [emoType, setEmoType] = useState<'PRIVATE' | 'SHARED'>('PRIVATE');
