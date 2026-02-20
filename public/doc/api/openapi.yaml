@@ -711,6 +711,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/albums/insight:
+    get:
+      tags:
+        - Albums
+      summary: Get insight overview for all accessible albums
+      description: Returns total emo value and per-album emo values with day-over-day changes.
+      responses:
+        '200':
+          description: Insight overview
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InsightOverviewResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/albums/insight/{id}:
     get:
       tags:
@@ -1528,3 +1547,47 @@ components:
             - 猫
             - 走る
             - 公園
+    InsightOverviewResponse:
+      type: object
+      required:
+        - totalEmoValue
+        - totalDayOverDayChange
+        - albums
+      properties:
+        totalEmoValue:
+          type: number
+          example: 25000.5
+        totalDayOverDayChange:
+          $ref: '#/components/schemas/EmoValueChange'
+        albums:
+          type: array
+          items:
+            $ref: '#/components/schemas/InsightAlbumItem'
+    InsightAlbumItem:
+      type: object
+      required:
+        - id
+        - name
+        - albumType
+        - groupName
+        - emoValue
+        - dayOverDayChange
+      properties:
+        id:
+          type: string
+          example: abc123
+        name:
+          type: string
+          example: 家族アルバム
+        albumType:
+          $ref: '#/components/schemas/AlbumType'
+        groupName:
+          type:
+            - string
+            - 'null'
+          example: null
+        emoValue:
+          type: number
+          example: 8500
+        dayOverDayChange:
+          $ref: '#/components/schemas/EmoValueChange'
