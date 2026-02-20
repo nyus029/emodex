@@ -16,6 +16,7 @@ model User {
 
 model Album {
   id                      String         @id @default(cuid())
+  userId                  String
   name                    String         @unique
   rootPath                String         @unique
   plannedDividend         DateTime?
@@ -33,7 +34,7 @@ model PhotoStorage {
   name           String
   storagePath    String
   photoCount     Int
-  totalSizeBytes Int
+  totalSizeBytes BigInt              @db.BigInt
   createdAt      DateTime            @default(now())
   photos         PhotoStoragePhoto[]
 
@@ -49,7 +50,7 @@ model PhotoStoragePhoto {
   blobPath       String
   blobUrl        String
   contentType    String?
-  sizeBytes      Int
+  sizeBytes      BigInt       @db.BigInt
   createdAt      DateTime     @default(now())
 
   @@index([photoStorageId, createdAt])

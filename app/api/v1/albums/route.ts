@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { z } from 'zod';
+import { auth0 } from '@/lib/auth0';
 import { prisma } from '@/lib/prisma';
 import { toAlbumResponse } from '@/lib/albums';
 import { toPathSegment } from '@/lib/path';
@@ -12,6 +14,12 @@ const createAlbumSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  const session = await auth0.getSession();
+  const userId = session?.user?.sub;
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const rawBody = (await request.json().catch(() => null)) as unknown;
   const parsed = createAlbumSchema.safeParse(rawBody);
 
@@ -31,6 +39,7 @@ export async function POST(request: Request) {
     const album = await prisma.album.create({
       data: {
         name,
+        userId,
         rootPath,
         plannedDividend: plannedDividend ? new Date(plannedDividend) : null,
         createdTags: createdTags ?? [],
@@ -46,10 +55,25 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(toAlbumResponse(album), { status: 201 });
-  } catch {
+  } catch (error) {
+    const isUniqueConstraintError =
+      (error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002') ||
+      (typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        error.code === 'P2002');
+    if (isUniqueConstraintError) {
+      return NextResponse.json(
+        { error: '同じアルバム名（またはルートパス）が既に存在します' },
+        { status: 409 },
+      );
+    }
+
+    console.error('Failed to create album', error);
     return NextResponse.json(
-      { error: '同じアルバム名（またはルートパス）が既に存在します' },
-      { status: 409 },
+      { error: 'Internal server error' },
+      { status: 500 },
     );
   }
 }

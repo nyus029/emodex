@@ -1,38 +1,4 @@
-type PhotoStorage = {
-  id: string;
-  name: string;
-  storagePath: string;
-  photoCount: number;
-  totalSizeBytes: number;
-  createdAt: string;
-  photos: Array<{
-    id: string;
-    fileName: string;
-    blobPath: string;
-    blobUrl: string;
-    contentType: string | null;
-    sizeBytes: number;
-  }>;
-};
-
-type AlbumResponse = {
-  id: string;
-  albumBasicInfo: {
-    albumName: string;
-    rootPath: string;
-    createdAt: string;
-    plannedDividend: string | null;
-    createdTags: string[];
-    requiredAtAlbumCreation: boolean;
-  };
-  photoStorageSummary: {
-    totalStorages: number;
-    totalPhotos: number;
-    totalSizeBytes: number;
-    lastAddedAt: string | null;
-  };
-  photoStorages: PhotoStorage[];
-};
+import type { AlbumResponse } from '@/lib/albums';
 
 type AlbumDetailPanelProps = {
   album: AlbumResponse | null;

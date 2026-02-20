@@ -2,6 +2,14 @@ type PrismaArgs = Record<string, unknown>;
 
 type AlbumFindUniqueResult = { id: string } | null | Record<string, unknown>;
 
+jest.mock('@/lib/auth0', () => ({
+  auth0: {
+    getSession: jest.fn(async () => ({
+      user: { sub: 'auth0|test-user' },
+    })),
+  },
+}));
+
 const handlers: {
   albumCreate: (args: PrismaArgs) => Promise<Record<string, unknown>>;
   albumFindUnique: (args: PrismaArgs) => Promise<AlbumFindUniqueResult>;
@@ -21,7 +29,7 @@ const handlers: {
 const fakePrisma = {
   album: {
     create: (args: PrismaArgs) => handlers.albumCreate(args),
-    findUnique: (args: PrismaArgs) => handlers.albumFindUnique(args),
+    findFirst: (args: PrismaArgs) => handlers.albumFindUnique(args),
   },
   photoStorage: {
     create: (args: PrismaArgs) => handlers.photoStorageCreate(args),
@@ -73,7 +81,7 @@ type PhotoRecord = {
   blobPath: string;
   blobUrl: string;
   contentType: string | null;
-  sizeBytes: number;
+  sizeBytes: bigint;
   createdAt: Date;
 };
 
@@ -83,13 +91,14 @@ type PhotoStorageRecord = {
   name: string;
   storagePath: string;
   photoCount: number;
-  totalSizeBytes: number;
+  totalSizeBytes: bigint;
   createdAt: Date;
   photos: PhotoRecord[];
 };
 
 type AlbumRecord = {
   id: string;
+  userId: string;
   name: string;
   rootPath: string;
   plannedDividend: Date | null;
@@ -109,6 +118,7 @@ function setupInMemoryHandlers() {
   setHandlers({
     albumCreate: async ({ data }: PrismaArgs) => {
       const payload = data as {
+        userId: string;
         name: string;
         rootPath: string;
         plannedDividend?: Date | null;
@@ -119,15 +129,18 @@ function setupInMemoryHandlers() {
       if (
         albums.some(
           (album) =>
-            album.name === payload.name || album.rootPath === payload.rootPath,
+            (album.name === payload.name ||
+              album.rootPath === payload.rootPath) &&
+            album.userId === payload.userId,
         )
       ) {
-        throw new Error('duplicate');
+        throw { code: 'P2002' };
       }
 
       const now = new Date('2026-02-20T10:00:00.000Z');
       const album: AlbumRecord = {
         id: `album-${++albumSequence}`,
+        userId: payload.userId,
         name: payload.name,
         rootPath: payload.rootPath,
         plannedDividend: payload.plannedDividend ?? null,
@@ -146,13 +159,25 @@ function setupInMemoryHandlers() {
     },
     albumFindUnique: async ({ where, select }: PrismaArgs) => {
       const id = (where as { id: string }).id;
-      const album = albums.find((item) => item.id === id);
+      const userId = (where as { userId?: string }).userId;
+      const album = albums.find(
+        (item) => item.id === id && (!userId || item.userId === userId),
+      );
       if (!album) {
         return null;
       }
 
-      if ((select as { id?: boolean } | undefined)?.id) {
-        return { id: album.id };
+      const selected = select as
+        | {
+            id?: boolean;
+            rootPath?: boolean;
+          }
+        | undefined;
+      if (selected?.id || selected?.rootPath) {
+        return {
+          ...(selected.id ? { id: album.id } : {}),
+          ...(selected.rootPath ? { rootPath: album.rootPath } : {}),
+        };
       }
 
       const sortedStorages = [...album.photoStorages].sort(
@@ -174,14 +199,14 @@ function setupInMemoryHandlers() {
         name: string;
         storagePath: string;
         photoCount: number;
-        totalSizeBytes: number;
+        totalSizeBytes: number | bigint;
         photos: {
           create: Array<{
             fileName: string;
             blobPath: string;
             blobUrl: string;
             contentType?: string | null;
-            sizeBytes: number;
+            sizeBytes: number | bigint;
           }>;
         };
       };
@@ -190,7 +215,7 @@ function setupInMemoryHandlers() {
         throw new Error('album not found');
       }
       if (album.photoStorages.some((item) => item.name === payload.name)) {
-        throw new Error('duplicate');
+        throw { code: 'P2002' };
       }
 
       const createdAt = new Date(
@@ -204,7 +229,10 @@ function setupInMemoryHandlers() {
         blobPath: photo.blobPath,
         blobUrl: photo.blobUrl,
         contentType: photo.contentType ?? null,
-        sizeBytes: photo.sizeBytes,
+        sizeBytes:
+          typeof photo.sizeBytes === 'bigint'
+            ? photo.sizeBytes
+            : BigInt(photo.sizeBytes),
         createdAt,
       }));
       const photoStorage: PhotoStorageRecord = {
@@ -213,7 +241,10 @@ function setupInMemoryHandlers() {
         name: payload.name,
         storagePath: payload.storagePath,
         photoCount: payload.photoCount,
-        totalSizeBytes: payload.totalSizeBytes,
+        totalSizeBytes:
+          typeof payload.totalSizeBytes === 'bigint'
+            ? payload.totalSizeBytes
+            : BigInt(payload.totalSizeBytes),
         createdAt,
         photos,
       };
@@ -245,7 +276,7 @@ describe('albums controllers', () => {
     const { postAlbum } = await routesPromise;
     setHandlers({
       albumCreate: async () => {
-        throw new Error('duplicate');
+        throw { code: 'P2002' };
       },
     });
 
