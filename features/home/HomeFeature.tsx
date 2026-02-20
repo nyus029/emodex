@@ -337,6 +337,9 @@ export default function HomeFeature() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-6 px-6 py-10">
       <AuthTestSetComponent />
+      <h1 className="text-2xl font-bold bg-test">
+        Mastra Stream Chat (Local MVP)
+      </h1>
       <div>
         <Link
           href="/admin"
