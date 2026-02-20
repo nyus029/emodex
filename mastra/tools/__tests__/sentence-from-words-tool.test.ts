@@ -10,6 +10,7 @@ describe('sentenceFromWordsTool', () => {
 
   it('should validate input schema', async () => {
     const inputSchema = sentenceFromWordsTool.inputSchema;
+    if (!inputSchema) throw new Error('inputSchema is undefined');
 
     const validInput = { words: ['猫', '走る', '公園'] };
     const result = await inputSchema.parseAsync(validInput);
@@ -18,6 +19,7 @@ describe('sentenceFromWordsTool', () => {
 
   it('should reject empty words array', async () => {
     const inputSchema = sentenceFromWordsTool.inputSchema;
+    if (!inputSchema) throw new Error('inputSchema is undefined');
 
     try {
       await inputSchema.parseAsync({ words: [] });
