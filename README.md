@@ -132,6 +132,15 @@ OPENAI_MODEL=openai/gpt-5-codex
 - `GET /api/v1/albums/{id}`: アルバム基本情報 + フォトストレージ一覧/集計を取得
 - クライアント直接アップロード用トークン発行: `POST /api/blob/upload`
 
+## 管理者インターフェース
+
+- 画面: `/admin`
+- 集約データ API: `GET /api/admin/overview`
+- system administrator 管理 API: `GET/POST/DELETE /api/admin/system-administrators`
+
+`/admin` は `SystemAdministrator` テーブルに登録された `User.id` のみアクセスできます。  
+初回登録前（`SystemAdministrator` が 0 件）のみ、`.env` の `SYSTEM_ADMIN_BOOTSTRAP_EMAILS` に含まれる email でアクセスし、管理者を追加できます。
+
 ## 接続確認 API
 
 DB のヘルスチェック:

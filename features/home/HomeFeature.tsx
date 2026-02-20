@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useState } from 'react';
+import Link from 'next/link';
 import { upload } from '@vercel/blob/client';
 import AlbumCreateForm from '@/components/albums/AlbumCreateForm';
 import AlbumDetailPanel from '@/components/albums/AlbumDetailPanel';
@@ -336,6 +337,14 @@ export default function HomeFeature() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-6 px-6 py-10">
       <AuthTestSetComponent />
+      <div>
+        <Link
+          href="/admin"
+          className="text-sm underline hover:text-zinc-600 dark:hover:text-zinc-300"
+        >
+          管理者インターフェースへ移動
+        </Link>
+      </div>
       <h1 className="text-2xl font-bold">Mastra Stream Chat (Local MVP)</h1>
       <p className="text-sm text-zinc-600 dark:text-zinc-300">
         OPENAI_API_KEY が未設定でもモックで stream 表示できます。
