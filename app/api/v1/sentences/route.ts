@@ -18,10 +18,7 @@ export async function POST(request: NextRequest) {
       throw new Error('Tool execute method is not defined');
     }
 
-    const result = await sentenceFromWordsTool.execute(
-      { words },
-      {} as Parameters<NonNullable<typeof sentenceFromWordsTool.execute>>[1],
-    );
+    const result = await sentenceFromWordsTool.execute({ words }, {});
 
     if ('error' in result && result.error === true) {
       return NextResponse.json(result, { status: 400 });
