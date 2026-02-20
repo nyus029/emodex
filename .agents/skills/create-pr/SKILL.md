@@ -105,7 +105,7 @@ gh pr checks <PR番号> --watch --fail-fast --interval 15
 - 最大30分待機。
 - 失敗時は失敗workflowのログを取得して修正、再コミット/再プッシュ。
 - prettier / eslint / TypeScript / test を優先的に自動修正。
-- Chromaticのみ失敗は手動対応として継続。
+- Chromaticのみ失敗は、ビジュアルリグレッションなど自動修正が難しい性質のチェックであり、デザイン確認やプロダクト判断を要するため、手動対応として継続。
 - 自動修正は最大3回。超えたら手動対応案内で終了。
 
 ### Step 10: レビュー待機（`--wait` 指定時のみ）
