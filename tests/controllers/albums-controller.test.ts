@@ -34,6 +34,7 @@ const fakePrisma = {
   photoStorage: {
     create: (args: PrismaArgs) => handlers.photoStorageCreate(args),
   },
+  systemAdministrator: {},
 };
 
 (globalThis as { prisma?: unknown }).prisma = fakePrisma;

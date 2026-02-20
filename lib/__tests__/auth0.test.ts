@@ -132,12 +132,17 @@ describe('onCallback', () => {
 
   describe('エラーハンドリング', () => {
     it('Auth0エラー時は500を返しDBに保存しない', async () => {
+      const consoleSpy = jest
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       const error = new Error('Auth failed') as SdkError;
 
       const result = await onCallback(error, { returnTo: '/' }, null);
 
       expect(result.status).toBe(500);
       expect(prisma.user.upsert).not.toHaveBeenCalled();
+      expect(consoleSpy).toHaveBeenCalledWith('Auth callback error:', error);
+      consoleSpy.mockRestore();
     });
 
     it('Prismaエラー時もリダイレクトを返す（認証はブロックしない）', async () => {

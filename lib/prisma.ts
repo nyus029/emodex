@@ -24,7 +24,9 @@ const hasSystemAdministratorDelegate = Boolean(
 );
 
 if (existingPrisma && !hasSystemAdministratorDelegate) {
-  void existingPrisma.$disconnect().catch(() => undefined);
+  if (typeof existingPrisma.$disconnect === 'function') {
+    void existingPrisma.$disconnect().catch(() => undefined);
+  }
 }
 
 export const prisma =
