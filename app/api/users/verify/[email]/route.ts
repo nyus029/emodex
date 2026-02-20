@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 const paramsSchema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().email(),
 });
 
 export async function GET(

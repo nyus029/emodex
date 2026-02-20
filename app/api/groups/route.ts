@@ -6,7 +6,7 @@ import { jsonError, normalizeEmail, requireUser } from './common';
 
 const createGroupSchema = z.object({
   groupName: z.string().trim().min(1),
-  memberEmails: z.array(z.string().email()).optional(),
+  memberEmails: z.array(z.string().trim().email()).optional(),
 });
 
 export async function GET(request: NextRequest) {
