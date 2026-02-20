@@ -1,29 +1,22 @@
 import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
-import { NextResponse } from 'next/server';
-import { auth0 } from '@/lib/auth0';
 import { findAccessibleAlbum } from '@/lib/album-access';
+import { requireAuth, jsonSuccess, jsonError } from '@/lib/api-utils';
 
 type UploadClientPayload = {
   albumId?: string;
 };
 
 export async function POST(request: Request) {
-  const session = await auth0.getSession();
-  const userId = session?.user?.sub;
-  const userEmail = session?.user?.email as string | undefined;
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth();
+  if (auth.error) return auth.error;
+  const { userId, userEmail } = auth.session;
 
   const body = (await request
     .json()
     .catch(() => null)) as HandleUploadBody | null;
 
   if (!body) {
-    return NextResponse.json(
-      { error: 'Invalid request body' },
-      { status: 400 },
-    );
+    return jsonError('Invalid request body', 400);
   }
 
   try {
@@ -64,10 +57,10 @@ export async function POST(request: Request) {
       onUploadCompleted: async () => {},
     });
 
-    return NextResponse.json(jsonResponse);
+    return jsonSuccess(jsonResponse);
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Upload setup failed';
-    return NextResponse.json({ error: message }, { status: 400 });
+    return jsonError(message, 400);
   }
 }

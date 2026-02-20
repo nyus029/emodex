@@ -1,15 +1,18 @@
-import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { auth0 } from '@/lib/auth0';
 import { prisma } from '@/lib/prisma';
 import {
   countSystemAdministrators,
   createSystemAdministrator,
   deleteSystemAdministratorByUserId,
   findSystemAdministratorByUserId,
-  getSystemAdministratorAccessByEmail,
   listSystemAdministrators,
 } from '@/lib/system-administrators';
+import {
+  requireAdminAuth,
+  parseBody,
+  jsonSuccess,
+  jsonError,
+} from '@/lib/api-utils';
 
 const mutateSystemAdministratorSchema = z
   .object({
@@ -44,150 +47,92 @@ async function resolveTargetUserId(input: {
 }
 
 export async function GET() {
-  const session = await auth0.getSession();
-  const email = session?.user?.email;
-  if (!email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const access = await getSystemAdministratorAccessByEmail(email);
-  if (!access.currentUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  if (!access.hasAccess) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  const admin = await requireAdminAuth();
+  if (admin.error) return admin.error;
 
   const administrators = await listSystemAdministrators();
 
-  return NextResponse.json(
-    {
-      currentUser: {
-        id: access.currentUser.id,
-        email: access.currentUser.email,
-        isRegisteredAdmin: access.isRegisteredAdmin,
-        isBootstrapAdmin: access.isBootstrapAdmin,
-      },
-      systemAdministrators: administrators.map((admin) => ({
-        id: admin.id,
-        userId: admin.userId,
-        userEmail: admin.userEmail,
-        userName: admin.userName,
-        createdByUserId: admin.createdByUserId,
-        createdByUserEmail: admin.createdByUserEmail,
-        createdAt: admin.createdAt,
-      })),
+  return jsonSuccess({
+    currentUser: {
+      id: admin.currentUser.id,
+      email: admin.currentUser.email,
+      isRegisteredAdmin: admin.isRegisteredAdmin,
+      isBootstrapAdmin: admin.isBootstrapAdmin,
     },
-    { status: 200 },
-  );
+    systemAdministrators: administrators.map((a) => ({
+      id: a.id,
+      userId: a.userId,
+      userEmail: a.userEmail,
+      userName: a.userName,
+      createdByUserId: a.createdByUserId,
+      createdByUserEmail: a.createdByUserEmail,
+      createdAt: a.createdAt,
+    })),
+  });
 }
 
 export async function POST(request: Request) {
-  const session = await auth0.getSession();
-  const email = session?.user?.email;
-  if (!email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const access = await getSystemAdministratorAccessByEmail(email);
-  if (!access.currentUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  if (!access.hasAccess) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  const admin = await requireAdminAuth();
+  if (admin.error) return admin.error;
 
   const rawBody = (await request.json().catch(() => null)) as unknown;
-  const parsed = mutateSystemAdministratorSchema.safeParse(rawBody);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: 'Invalid request body', details: parsed.error.flatten() },
-      { status: 400 },
-    );
-  }
+  const parsed = parseBody(rawBody, mutateSystemAdministratorSchema);
+  if (parsed.error) return parsed.error;
 
   const targetUserId = await resolveTargetUserId(parsed.data);
   if (!targetUserId) {
-    return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    return jsonError('User not found', 404);
   }
 
   const existingAdmin = await findSystemAdministratorByUserId(targetUserId);
   if (existingAdmin) {
-    return NextResponse.json(
-      { error: '既に system administrator に登録されています' },
-      { status: 409 },
-    );
+    return jsonError('既に system administrator に登録されています', 409);
   }
 
   try {
     const created = await createSystemAdministrator(
       targetUserId,
-      access.currentUser.id,
+      admin.currentUser.id,
     );
 
-    return NextResponse.json({ systemAdministrator: created }, { status: 201 });
+    return jsonSuccess({ systemAdministrator: created }, 201);
   } catch (error) {
     console.error('Failed to create system administrator', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 },
-    );
+    return jsonError('Internal server error', 500);
   }
 }
 
 export async function DELETE(request: Request) {
-  const session = await auth0.getSession();
-  const email = session?.user?.email;
-  if (!email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const admin = await requireAdminAuth();
+  if (admin.error) return admin.error;
 
-  const access = await getSystemAdministratorAccessByEmail(email);
-  if (!access.currentUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  if (!access.isRegisteredAdmin) {
-    return NextResponse.json(
-      { error: 'Only registered system administrator can delete entries' },
-      { status: 403 },
+  if (!admin.isRegisteredAdmin) {
+    return jsonError(
+      'Only registered system administrator can delete entries',
+      403,
     );
   }
 
   const rawBody = (await request.json().catch(() => null)) as unknown;
-  const parsed = mutateSystemAdministratorSchema.safeParse(rawBody);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: 'Invalid request body', details: parsed.error.flatten() },
-      { status: 400 },
-    );
-  }
+  const parsed = parseBody(rawBody, mutateSystemAdministratorSchema);
+  if (parsed.error) return parsed.error;
 
   const targetUserId = await resolveTargetUserId(parsed.data);
   if (!targetUserId) {
-    return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    return jsonError('User not found', 404);
   }
+
   const totalAdmins = await countSystemAdministrators();
   if (totalAdmins <= 1) {
-    return NextResponse.json(
-      { error: '最後の system administrator は削除できません' },
-      { status: 400 },
-    );
+    return jsonError('最後の system administrator は削除できません', 400);
   }
 
   const target = await findSystemAdministratorByUserId(targetUserId);
   if (!target) {
-    return NextResponse.json(
-      { error: 'system administrator が見つかりません' },
-      { status: 404 },
-    );
+    return jsonError('system administrator が見つかりません', 404);
   }
 
   await deleteSystemAdministratorByUserId(targetUserId);
 
-  return NextResponse.json(
-    {
-      deletedUserId: targetUserId,
-    },
-    { status: 200 },
-  );
+  return jsonSuccess({ deletedUserId: targetUserId });
 }

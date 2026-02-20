@@ -1,48 +1,41 @@
-import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { auth0 } from '@/lib/auth0';
 import { prisma } from '@/lib/prisma';
 import { findAccessibleAlbum } from '@/lib/album-access';
 import { calculatePhotoStorageEmo } from '@/lib/emo-value';
+import {
+  requireAuth,
+  parseBody,
+  jsonSuccess,
+  jsonError,
+} from '@/lib/api-utils';
+import type { RouteContext } from '@/types/api';
 
 const dividendSchema = z.object({
   action: z.enum(['REINVEST', 'RECEIVE']),
 });
 
-type RouteContext = {
-  params: Promise<{ id: string }>;
-};
-
-export async function POST(request: Request, context: RouteContext) {
-  const session = await auth0.getSession();
-  const userId = session?.user?.sub;
-  const userEmail = session?.user?.email as string | undefined;
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+export async function POST(
+  request: Request,
+  context: RouteContext<{ id: string }>,
+) {
+  const auth = await requireAuth();
+  if (auth.error) return auth.error;
+  const { userId, userEmail } = auth.session;
 
   const { id } = await context.params;
 
   const album = await findAccessibleAlbum(id, userId, userEmail ?? '');
   if (!album) {
-    return NextResponse.json({ error: 'Album not found' }, { status: 404 });
+    return jsonError('Album not found', 404);
   }
 
   if (!album.plannedDividend || album.plannedDividend > new Date()) {
-    return NextResponse.json(
-      { error: 'Dividend date has not been reached yet' },
-      { status: 400 },
-    );
+    return jsonError('Dividend date has not been reached yet', 400);
   }
 
   const rawBody = (await request.json().catch(() => null)) as unknown;
-  const parsed = dividendSchema.safeParse(rawBody);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: 'Invalid request body', details: parsed.error.flatten() },
-      { status: 400 },
-    );
-  }
+  const parsed = parseBody(rawBody, dividendSchema);
+  if (parsed.error) return parsed.error;
 
   const { action } = parsed.data;
 
@@ -51,10 +44,7 @@ export async function POST(request: Request, context: RouteContext) {
   });
 
   if (activeStorages.length === 0) {
-    return NextResponse.json(
-      { error: 'No active photo storages in this album' },
-      { status: 400 },
-    );
+    return jsonError('No active photo storages in this album', 400);
   }
 
   const result = await prisma.$transaction(async (tx) => {
@@ -114,18 +104,15 @@ export async function POST(request: Request, context: RouteContext) {
     return events;
   });
 
-  return NextResponse.json(
-    {
-      action,
-      processedStorages: result.length,
-      events: result.map((e) => ({
-        id: e.id,
-        photoStorageId: e.photoStorageId,
-        emoValueAtEvent: e.emoValueAtEvent,
-        previousBaseEmo: e.previousBaseEmo,
-        newBaseEmo: e.newBaseEmo,
-      })),
-    },
-    { status: 200 },
-  );
+  return jsonSuccess({
+    action,
+    processedStorages: result.length,
+    events: result.map((e) => ({
+      id: e.id,
+      photoStorageId: e.photoStorageId,
+      emoValueAtEvent: e.emoValueAtEvent,
+      previousBaseEmo: e.previousBaseEmo,
+      newBaseEmo: e.newBaseEmo,
+    })),
+  });
 }
