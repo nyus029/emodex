@@ -1,13 +1,7 @@
 import { NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
 import { auth0 } from '@/lib/auth0';
-import { prisma } from '@/lib/prisma';
-import { findAccessibleAlbum } from '@/lib/album-access';
-import {
-  createPhotoStorageSchema,
-  resolveStoragePath,
-  sumFileSize,
-} from '@/lib/photo-storage';
+import { createPhotoStorageSchema } from '@/lib/photo-storage';
+import { createPhotoStorage } from '@/lib/services/album-service';
 
 type RouteContext = {
   params: Promise<{
@@ -34,108 +28,25 @@ export async function POST(request: Request, context: RouteContext) {
     );
   }
 
-  const album = await findAccessibleAlbum(id, userId, userEmail ?? '');
+  const result = await createPhotoStorage(
+    id,
+    userId,
+    userEmail ?? '',
+    parsed.data,
+  );
 
-  if (!album) {
-    return NextResponse.json({ error: 'Album not found' }, { status: 404 });
-  }
-
-  const totalSizeBytes = BigInt(sumFileSize(parsed.data.files));
-  let storagePath = '';
-  try {
-    storagePath = resolveStoragePath(parsed.data.files);
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : 'Invalid photo storage files';
-    return NextResponse.json({ error: message }, { status: 400 });
-  }
-
-  try {
-    if (!storagePath.startsWith(`${album.rootPath}/`)) {
-      return NextResponse.json(
-        { error: 'Invalid storage path' },
-        { status: 400 },
-      );
-    }
-
-    const createdPhotoStorage = await prisma.photoStorage.create({
-      data: {
-        albumId: id,
-        name: parsed.data.name,
-        storagePath,
-        photoCount: parsed.data.files.length,
-        totalSizeBytes,
-        tags: parsed.data.tags ?? [],
-        photos: {
-          create: parsed.data.files.map((file) => ({
-            fileName: file.fileName,
-            blobPath: file.blobPath,
-            blobUrl: file.blobUrl,
-            contentType: file.contentType ?? null,
-            sizeBytes: BigInt(file.sizeBytes),
-          })),
-        },
-      },
-      include: {
-        photos: true,
-      },
-    });
-
+  if (!result.success) {
+    const statusMap = {
+      ALBUM_NOT_FOUND: 404,
+      INVALID_STORAGE_PATH: 400,
+      DUPLICATE: 409,
+      INTERNAL: 500,
+    } as const;
     return NextResponse.json(
-      {
-        albumId: id,
-        photoStorage: {
-          id: createdPhotoStorage.id,
-          name: createdPhotoStorage.name,
-          storagePath: createdPhotoStorage.storagePath,
-          photoCount: createdPhotoStorage.photoCount,
-          totalSizeBytes: Number(createdPhotoStorage.totalSizeBytes),
-          tags: Array.isArray(createdPhotoStorage.tags)
-            ? createdPhotoStorage.tags
-            : [],
-          createdAt: createdPhotoStorage.createdAt.toISOString(),
-          photos: createdPhotoStorage.photos.map((photo) => ({
-            id: photo.id,
-            fileName: photo.fileName,
-            blobPath: photo.blobPath,
-            blobUrl: photo.blobUrl,
-            contentType: photo.contentType,
-            sizeBytes: Number(photo.sizeBytes),
-          })),
-        },
-      },
-      { status: 201 },
-    );
-  } catch (error) {
-    const uniqueTarget =
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === 'P2002' &&
-      Array.isArray(error.meta?.target)
-        ? error.meta.target.map(String)
-        : [];
-    const isUniqueConstraintError =
-      (error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002') ||
-      (typeof error === 'object' &&
-        error !== null &&
-        'code' in error &&
-        error.code === 'P2002');
-    if (
-      isUniqueConstraintError &&
-      (uniqueTarget.length === 0 ||
-        uniqueTarget.includes('PhotoStorage_albumId_name_key') ||
-        (uniqueTarget.includes('albumId') && uniqueTarget.includes('name')))
-    ) {
-      return NextResponse.json(
-        { error: '同じphoto_storage名が既に存在します' },
-        { status: 409 },
-      );
-    }
-
-    console.error('Failed to create photo storage', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 },
+      { error: result.error.message },
+      { status: statusMap[result.error.kind] },
     );
   }
+
+  return NextResponse.json(result.data, { status: 201 });
 }

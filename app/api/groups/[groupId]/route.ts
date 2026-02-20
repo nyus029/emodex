@@ -1,11 +1,20 @@
-import { prisma } from '@/lib/prisma';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { jsonError, parseGroupId, requireUser } from '../common';
+import {
+  getGroup,
+  updateGroup,
+  deleteGroup,
+} from '@/lib/services/group-service';
 
 const updateGroupSchema = z.object({
   groupName: z.string().trim().min(1),
 });
+
+const serviceErrorToHttp = {
+  NOT_FOUND: { message: 'Group not found', status: 404 },
+  FORBIDDEN: { message: 'Forbidden', status: 403 },
+} as const;
 
 export async function GET(
   request: NextRequest,
@@ -22,35 +31,13 @@ export async function GET(
     return parsed.error;
   }
 
-  const group = await prisma.group.findUnique({
-    where: { id: parsed.groupId },
-  });
-
-  if (!group) {
-    return jsonError('Group not found', 404);
+  const result = await getGroup(parsed.groupId, currentUser.user.id);
+  if ('error' in result) {
+    const { message, status } = serviceErrorToHttp[result.error];
+    return jsonError(message, status);
   }
 
-  const membership = await prisma.membership.findUnique({
-    where: {
-      userId_groupId: {
-        userId: currentUser.user.id,
-        groupId: parsed.groupId,
-      },
-    },
-  });
-
-  if (!membership) {
-    return jsonError('Forbidden', 403);
-  }
-
-  return NextResponse.json(
-    {
-      groupId: group.id,
-      groupName: group.groupName,
-      adminUserId: group.adminUserId,
-    },
-    { status: 200 },
-  );
+  return NextResponse.json(result.data, { status: 200 });
 }
 
 export async function PATCH(
@@ -75,31 +62,17 @@ export async function PATCH(
     return jsonError('Invalid request body', 400);
   }
 
-  const group = await prisma.group.findUnique({
-    where: { id: parsed.groupId },
-  });
-
-  if (!group) {
-    return jsonError('Group not found', 404);
-  }
-
-  if (group.adminUserId !== currentUser.user.id) {
-    return jsonError('Forbidden', 403);
-  }
-
-  const updated = await prisma.group.update({
-    where: { id: parsed.groupId },
-    data: { groupName: validation.data.groupName },
-  });
-
-  return NextResponse.json(
-    {
-      groupId: updated.id,
-      groupName: updated.groupName,
-      adminUserId: updated.adminUserId,
-    },
-    { status: 200 },
+  const result = await updateGroup(
+    parsed.groupId,
+    currentUser.user.id,
+    validation.data.groupName,
   );
+  if ('error' in result) {
+    const { message, status } = serviceErrorToHttp[result.error];
+    return jsonError(message, status);
+  }
+
+  return NextResponse.json(result.data, { status: 200 });
 }
 
 export async function DELETE(
@@ -117,19 +90,11 @@ export async function DELETE(
     return parsed.error;
   }
 
-  const group = await prisma.group.findUnique({
-    where: { id: parsed.groupId },
-  });
-
-  if (!group) {
-    return jsonError('Group not found', 404);
+  const result = await deleteGroup(parsed.groupId, currentUser.user.id);
+  if ('error' in result) {
+    const { message, status } = serviceErrorToHttp[result.error];
+    return jsonError(message, status);
   }
-
-  if (group.adminUserId !== currentUser.user.id) {
-    return jsonError('Forbidden', 403);
-  }
-
-  await prisma.group.delete({ where: { id: parsed.groupId } });
 
   return new NextResponse(null, { status: 204 });
 }

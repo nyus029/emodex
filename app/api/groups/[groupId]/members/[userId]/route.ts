@@ -1,5 +1,3 @@
-import { prisma } from '@/lib/prisma';
-import { MembershipRole } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import {
@@ -8,6 +6,10 @@ import {
   parseGroupId,
   requireUser,
 } from '../../../common';
+import {
+  updateMemberRole,
+  removeGroupMember,
+} from '@/lib/services/member-service';
 
 const updateMemberSchema = z.object({
   role: membershipRoleSchema,
@@ -20,6 +22,20 @@ function parseUserId(raw?: string) {
   }
   return { userId };
 }
+
+const memberErrorToHttp = {
+  GROUP_NOT_FOUND: { message: 'Group not found', status: 404 },
+  FORBIDDEN: { message: 'Forbidden', status: 403 },
+  MEMBERSHIP_NOT_FOUND: { message: 'Membership not found', status: 404 },
+  CANNOT_DEMOTE_ADMIN: {
+    message: 'Transfer admin role before demoting the current admin',
+    status: 400,
+  },
+  CANNOT_REMOVE_ADMIN: {
+    message: 'Cannot remove the group admin',
+    status: 400,
+  },
+} as const;
 
 export async function PATCH(
   request: NextRequest,
@@ -48,81 +64,18 @@ export async function PATCH(
     return jsonError('Invalid request body', 400);
   }
 
-  const group = await prisma.group.findUnique({
-    where: { id: parsedGroup.groupId },
-  });
-
-  if (!group) {
-    return jsonError('Group not found', 404);
-  }
-
-  if (group.adminUserId !== currentUser.user.id) {
-    return jsonError('Forbidden', 403);
-  }
-
-  const membership = await prisma.membership.findUnique({
-    where: {
-      userId_groupId: {
-        userId: parsedUser.userId,
-        groupId: parsedGroup.groupId,
-      },
-    },
-  });
-
-  if (!membership) {
-    return jsonError('Membership not found', 404);
-  }
-
-  if (
-    validation.data.role === MembershipRole.MEMBER &&
-    parsedUser.userId === group.adminUserId
-  ) {
-    return jsonError(
-      'Transfer admin role before demoting the current admin',
-      400,
-    );
-  }
-
-  const updatedMembership = await prisma.$transaction(async (tx) => {
-    if (
-      validation.data.role === MembershipRole.ADMIN &&
-      parsedUser.userId !== group.adminUserId
-    ) {
-      await tx.membership.update({
-        where: {
-          userId_groupId: {
-            userId: group.adminUserId,
-            groupId: parsedGroup.groupId,
-          },
-        },
-        data: { role: MembershipRole.MEMBER },
-      });
-
-      await tx.group.update({
-        where: { id: parsedGroup.groupId },
-        data: { adminUserId: parsedUser.userId },
-      });
-    }
-
-    return tx.membership.update({
-      where: {
-        userId_groupId: {
-          userId: parsedUser.userId,
-          groupId: parsedGroup.groupId,
-        },
-      },
-      data: { role: validation.data.role },
-    });
-  });
-
-  return NextResponse.json(
-    {
-      userId: updatedMembership.userId,
-      groupId: updatedMembership.groupId,
-      role: updatedMembership.role,
-    },
-    { status: 200 },
+  const result = await updateMemberRole(
+    parsedGroup.groupId,
+    currentUser.user.id,
+    parsedUser.userId,
+    validation.data.role,
   );
+  if ('error' in result) {
+    const { message, status } = memberErrorToHttp[result.error];
+    return jsonError(message, status);
+  }
+
+  return NextResponse.json(result.data, { status: 200 });
 }
 
 export async function DELETE(
@@ -145,43 +98,15 @@ export async function DELETE(
     return parsedUser.error;
   }
 
-  const group = await prisma.group.findUnique({
-    where: { id: parsedGroup.groupId },
-  });
-
-  if (!group) {
-    return jsonError('Group not found', 404);
+  const result = await removeGroupMember(
+    parsedGroup.groupId,
+    currentUser.user.id,
+    parsedUser.userId,
+  );
+  if ('error' in result) {
+    const { message, status } = memberErrorToHttp[result.error];
+    return jsonError(message, status);
   }
-
-  if (group.adminUserId !== currentUser.user.id) {
-    return jsonError('Forbidden', 403);
-  }
-
-  if (parsedUser.userId === group.adminUserId) {
-    return jsonError('Cannot remove the group admin', 400);
-  }
-
-  const membership = await prisma.membership.findUnique({
-    where: {
-      userId_groupId: {
-        userId: parsedUser.userId,
-        groupId: parsedGroup.groupId,
-      },
-    },
-  });
-
-  if (!membership) {
-    return jsonError('Membership not found', 404);
-  }
-
-  await prisma.membership.delete({
-    where: {
-      userId_groupId: {
-        userId: parsedUser.userId,
-        groupId: parsedGroup.groupId,
-      },
-    },
-  });
 
   return new NextResponse(null, { status: 204 });
 }

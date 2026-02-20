@@ -1,19 +1,29 @@
-import { prisma } from '@/lib/prisma';
 import { MembershipRole } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import {
   jsonError,
   membershipRoleSchema,
-  normalizeEmail,
   parseGroupId,
   requireUser,
 } from '../../common';
+import {
+  listGroupMembers,
+  addGroupMember,
+} from '@/lib/services/member-service';
 
 const addMemberSchema = z.object({
   email: z.string().email(),
   role: membershipRoleSchema.default(MembershipRole.MEMBER),
 });
+
+const memberErrorToHttp = {
+  NOT_FOUND: { message: 'Group not found', status: 404 },
+  FORBIDDEN: { message: 'Forbidden', status: 403 },
+  GROUP_NOT_FOUND: { message: 'Group not found', status: 404 },
+  USER_NOT_FOUND: { message: 'User not found', status: 404 },
+  ALREADY_EXISTS: { message: 'Membership already exists', status: 409 },
+} as const;
 
 export async function GET(
   request: NextRequest,
@@ -30,40 +40,13 @@ export async function GET(
     return parsed.error;
   }
 
-  const group = await prisma.group.findUnique({
-    where: { id: parsed.groupId },
-  });
-
-  if (!group) {
-    return jsonError('Group not found', 404);
+  const result = await listGroupMembers(parsed.groupId, currentUser.user.id);
+  if ('error' in result) {
+    const { message, status } = memberErrorToHttp[result.error];
+    return jsonError(message, status);
   }
 
-  const membership = await prisma.membership.findUnique({
-    where: {
-      userId_groupId: {
-        userId: currentUser.user.id,
-        groupId: parsed.groupId,
-      },
-    },
-  });
-
-  if (!membership) {
-    return jsonError('Forbidden', 403);
-  }
-
-  const members = await prisma.membership.findMany({
-    where: { groupId: parsed.groupId },
-    include: { user: true },
-  });
-
-  return NextResponse.json(
-    members.map((member) => ({
-      userId: member.userId,
-      email: member.user.email,
-      role: member.role,
-    })),
-    { status: 200 },
-  );
+  return NextResponse.json(result.data, { status: 200 });
 }
 
 export async function POST(
@@ -88,55 +71,15 @@ export async function POST(
     return jsonError('Invalid request body', 400);
   }
 
-  const group = await prisma.group.findUnique({
-    where: { id: parsed.groupId },
-  });
-
-  if (!group) {
-    return jsonError('Group not found', 404);
-  }
-
-  if (group.adminUserId !== currentUser.user.id) {
-    return jsonError('Forbidden', 403);
-  }
-
-  const targetEmail = normalizeEmail(validation.data.email);
-
-  const user = await prisma.user.findUnique({
-    where: { email: targetEmail },
-  });
-
-  if (!user) {
-    return jsonError('User not found', 404);
-  }
-
-  const existingMembership = await prisma.membership.findUnique({
-    where: {
-      userId_groupId: {
-        userId: user.id,
-        groupId: parsed.groupId,
-      },
-    },
-  });
-
-  if (existingMembership) {
-    return jsonError('Membership already exists', 409);
-  }
-
-  const membership = await prisma.membership.create({
-    data: {
-      userId: user.id,
-      groupId: parsed.groupId,
-      role: validation.data.role,
-    },
-  });
-
-  return NextResponse.json(
-    {
-      userId: membership.userId,
-      groupId: membership.groupId,
-      role: membership.role,
-    },
-    { status: 201 },
+  const result = await addGroupMember(
+    parsed.groupId,
+    currentUser.user.id,
+    validation.data,
   );
+  if ('error' in result) {
+    const { message, status } = memberErrorToHttp[result.error];
+    return jsonError(message, status);
+  }
+
+  return NextResponse.json(result.data, { status: 201 });
 }

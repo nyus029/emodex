@@ -1,11 +1,7 @@
 import { NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { auth0 } from '@/lib/auth0';
-import { prisma } from '@/lib/prisma';
-import { toAlbumResponse } from '@/lib/albums';
-import type { AlbumListItem } from '@/lib/albums';
-import { toPathSegment } from '@/lib/path';
+import { listAlbums, createAlbum } from '@/lib/services/album-service';
 
 const createAlbumSchema = z
   .object({
@@ -32,67 +28,7 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const ownAlbums = await prisma.album.findMany({
-    where: { userId },
-    include: {
-      group: true,
-      _count: { select: { photoStorages: true } },
-    },
-    orderBy: { createdAt: 'desc' },
-  });
-
-  let sharedAlbums: typeof ownAlbums = [];
-  if (userEmail) {
-    const dbUser = await prisma.user.findUnique({
-      where: { email: userEmail },
-      select: { id: true },
-    });
-
-    if (dbUser) {
-      const memberships = await prisma.membership.findMany({
-        where: { userId: dbUser.id },
-        select: { groupId: true },
-      });
-      const groupIds = memberships.map((m) => m.groupId);
-
-      if (groupIds.length > 0) {
-        sharedAlbums = await prisma.album.findMany({
-          where: {
-            albumType: 'SHARED',
-            groupId: { in: groupIds },
-            NOT: { userId },
-          },
-          include: {
-            group: true,
-            _count: { select: { photoStorages: true } },
-          },
-          orderBy: { createdAt: 'desc' },
-        });
-      }
-    }
-  }
-
-  const toTagArray = (tags: Prisma.JsonValue | null): string[] => {
-    if (!Array.isArray(tags)) return [];
-    return tags.filter((tag): tag is string => typeof tag === 'string');
-  };
-
-  const toListItem = (album: (typeof ownAlbums)[number]): AlbumListItem => ({
-    id: album.id,
-    name: album.name,
-    albumType: album.albumType,
-    rootPath: album.rootPath,
-    groupId: album.groupId,
-    groupName: album.group?.groupName ?? null,
-    createdTags: toTagArray(album.createdTags),
-    photoStorageCount: album._count.photoStorages,
-  });
-
-  const albums = [
-    ...ownAlbums.map(toListItem),
-    ...sharedAlbums.map(toListItem),
-  ];
-
+  const albums = await listAlbums(userId, userEmail);
   return NextResponse.json(albums, { status: 200 });
 }
 
@@ -114,95 +50,28 @@ export async function POST(request: Request) {
     );
   }
 
-  const {
-    name,
-    albumType,
-    groupId,
-    plannedDividend,
-    createdTags,
-    requiredAtAlbumCreation,
-  } = parsed.data;
+  const result = await createAlbum(userId, userEmail, parsed.data);
 
-  const resolvedAlbumType = albumType ?? 'PRIVATE';
-
-  if (resolvedAlbumType === 'SHARED' && groupId) {
-    if (!userEmail) {
-      return NextResponse.json(
-        { error: 'Unable to verify group membership' },
-        { status: 400 },
-      );
-    }
-
-    const dbUser = await prisma.user.findUnique({
-      where: { email: userEmail },
-      select: { id: true },
-    });
-
-    if (!dbUser) {
-      return NextResponse.json(
-        { error: 'User not found in database' },
-        { status: 404 },
-      );
-    }
-
-    const membership = await prisma.membership.findUnique({
-      where: {
-        userId_groupId: { userId: dbUser.id, groupId },
-      },
-    });
-
-    if (!membership) {
-      return NextResponse.json(
-        { error: 'You are not a member of this group' },
-        { status: 403 },
-      );
-    }
-  }
-
-  const rootPath = toPathSegment(name);
-
-  try {
-    const album = await prisma.album.create({
-      data: {
-        name,
-        userId,
-        rootPath,
-        albumType: resolvedAlbumType,
-        groupId: resolvedAlbumType === 'SHARED' ? (groupId ?? null) : null,
-        plannedDividend: plannedDividend ? new Date(plannedDividend) : null,
-        createdTags: createdTags ?? [],
-        requiredAtAlbumCreation: requiredAtAlbumCreation ?? false,
-      },
-      include: {
-        group: true,
-        photoStorages: {
-          include: {
-            photos: true,
-          },
-        },
-      },
-    });
-
-    return NextResponse.json(toAlbumResponse(album), { status: 201 });
-  } catch (error) {
-    const isUniqueConstraintError =
-      (error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002') ||
-      (typeof error === 'object' &&
-        error !== null &&
-        'code' in error &&
-        error.code === 'P2002');
-    if (isUniqueConstraintError) {
-      return NextResponse.json(
-        { error: '同じアルバム名（またはルートパス）が既に存在します' },
-        { status: 409 },
-      );
-    }
-
-    console.error('Failed to create album', error);
+  if (!result.success) {
+    const statusMap = {
+      MEMBERSHIP_UNVERIFIABLE: 400,
+      USER_NOT_FOUND: 404,
+      NOT_A_MEMBER: 403,
+      DUPLICATE: 409,
+      INTERNAL: 500,
+    } as const;
+    const messageMap = {
+      MEMBERSHIP_UNVERIFIABLE: 'Unable to verify group membership',
+      USER_NOT_FOUND: 'User not found in database',
+      NOT_A_MEMBER: 'You are not a member of this group',
+      DUPLICATE: result.error.kind === 'DUPLICATE' ? result.error.message : '',
+      INTERNAL: result.error.kind === 'INTERNAL' ? result.error.message : '',
+    } as const;
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 },
+      { error: messageMap[result.error.kind] },
+      { status: statusMap[result.error.kind] },
     );
   }
+
+  return NextResponse.json(result.data, { status: 201 });
 }

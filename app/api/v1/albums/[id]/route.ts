@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth0 } from '@/lib/auth0';
-import { toAlbumResponse } from '@/lib/albums';
-import { findAccessibleAlbum } from '@/lib/album-access';
-import { prisma } from '@/lib/prisma';
+import { getAlbumDetail } from '@/lib/services/album-service';
 
 type RouteContext = {
   params: Promise<{
@@ -19,39 +17,11 @@ export async function GET(_request: Request, context: RouteContext) {
   }
 
   const { id } = await context.params;
-
-  const accessibleAlbum = await findAccessibleAlbum(
-    id,
-    userId,
-    userEmail ?? '',
-  );
-
-  if (!accessibleAlbum) {
-    return NextResponse.json({ error: 'Album not found' }, { status: 404 });
-  }
-
-  const album = await prisma.album.findUnique({
-    where: { id },
-    include: {
-      group: true,
-      photoStorages: {
-        orderBy: {
-          createdAt: 'desc',
-        },
-        include: {
-          photos: {
-            orderBy: {
-              createdAt: 'asc',
-            },
-          },
-        },
-      },
-    },
-  });
+  const album = await getAlbumDetail(id, userId, userEmail ?? '');
 
   if (!album) {
     return NextResponse.json({ error: 'Album not found' }, { status: 404 });
   }
 
-  return NextResponse.json(toAlbumResponse(album), { status: 200 });
+  return NextResponse.json(album, { status: 200 });
 }
