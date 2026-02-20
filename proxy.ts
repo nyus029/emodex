@@ -1,11 +1,10 @@
-import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { auth0 } from './lib/auth0';
 
 const isProduction = process.env.VERCEL_ENV === 'production';
 const isPreReleaseLocked = process.env.PRE_RELEASE_LOCK !== 'false';
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: Request) {
   if (isProduction && isPreReleaseLocked) {
     return new NextResponse('Forbidden', { status: 403 });
   }
