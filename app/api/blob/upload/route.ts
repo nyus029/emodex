@@ -5,7 +5,6 @@ import { prisma } from '@/lib/prisma';
 
 type UploadClientPayload = {
   albumId?: string;
-  storagePath?: string;
 };
 
 export async function POST(request: Request) {
@@ -31,31 +30,26 @@ export async function POST(request: Request) {
       body,
       request,
       onBeforeGenerateToken: async (pathname, clientPayload) => {
-        if (!clientPayload) {
-          throw new Error('clientPayload is required');
+        const payload = clientPayload
+          ? (JSON.parse(clientPayload) as UploadClientPayload)
+          : null;
+        if (!payload?.albumId) {
+          throw new Error('albumId is required in clientPayload');
         }
-
-        const parsedPayload = JSON.parse(clientPayload) as UploadClientPayload;
-
-        if (!parsedPayload.storagePath || !parsedPayload.albumId) {
-          throw new Error(
-            'albumId and storagePath are required in clientPayload',
-          );
-        }
-
-        if (!pathname.startsWith(`${parsedPayload.storagePath}/`)) {
-          throw new Error('Invalid upload path');
-        }
-
         const album = await prisma.album.findFirst({
-          where: { id: parsedPayload.albumId, userId },
+          where: { id: payload.albumId, userId },
           select: { rootPath: true },
         });
         if (!album) {
           throw new Error('Album not found');
         }
 
-        if (!parsedPayload.storagePath.startsWith(`${album.rootPath}/`)) {
+        const normalizedPathname = pathname.startsWith('/')
+          ? pathname.slice(1)
+          : pathname;
+        const allowedPrefix = `${album.rootPath}/`;
+
+        if (!normalizedPathname.startsWith(allowedPrefix)) {
           throw new Error('Invalid storage path');
         }
 

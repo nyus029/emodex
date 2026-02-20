@@ -87,8 +87,7 @@ export function toAlbumResponse(album: AlbumWithPhotoStorages): AlbumResponse {
       albumName: album.name,
       rootPath: album.rootPath,
       createdAt: album.createdAt.toISOString(),
-      plannedDividend:
-        album.plannedDividend?.toISOString().slice(0, 10) ?? null,
+      plannedDividend: album.plannedDividend?.toISOString() ?? null,
       createdTags: toTagArray(album.createdTags),
       requiredAtAlbumCreation: album.requiredAtAlbumCreation,
     },

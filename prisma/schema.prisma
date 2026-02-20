@@ -78,7 +78,7 @@ model PhotoStoragePhoto {
   photoStorage   PhotoStorage @relation(fields: [photoStorageId], references: [id], onDelete: Cascade)
   fileName       String
   blobPath       String
-  blobUrl        String
+  blobUrl        String       @db.Text
   contentType    String?
   sizeBytes      BigInt       @db.BigInt
   createdAt      DateTime     @default(now())
