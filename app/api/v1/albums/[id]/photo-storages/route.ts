@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { auth0 } from '@/lib/auth0';
 import { prisma } from '@/lib/prisma';
+import { findAccessibleAlbum } from '@/lib/album-access';
 import {
   createPhotoStorageSchema,
   resolveStoragePath,
@@ -17,6 +18,7 @@ type RouteContext = {
 export async function POST(request: Request, context: RouteContext) {
   const session = await auth0.getSession();
   const userId = session?.user?.sub;
+  const userEmail = session?.user?.email as string | undefined;
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -32,10 +34,7 @@ export async function POST(request: Request, context: RouteContext) {
     );
   }
 
-  const album = await prisma.album.findFirst({
-    where: { id, userId },
-    select: { id: true, rootPath: true },
-  });
+  const album = await findAccessibleAlbum(id, userId, userEmail ?? '');
 
   if (!album) {
     return NextResponse.json({ error: 'Album not found' }, { status: 404 });
@@ -66,6 +65,7 @@ export async function POST(request: Request, context: RouteContext) {
         storagePath,
         photoCount: parsed.data.files.length,
         totalSizeBytes,
+        tags: parsed.data.tags ?? [],
         photos: {
           create: parsed.data.files.map((file) => ({
             fileName: file.fileName,
@@ -90,6 +90,9 @@ export async function POST(request: Request, context: RouteContext) {
           storagePath: createdPhotoStorage.storagePath,
           photoCount: createdPhotoStorage.photoCount,
           totalSizeBytes: Number(createdPhotoStorage.totalSizeBytes),
+          tags: Array.isArray(createdPhotoStorage.tags)
+            ? createdPhotoStorage.tags
+            : [],
           createdAt: createdPhotoStorage.createdAt.toISOString(),
           photos: createdPhotoStorage.photos.map((photo) => ({
             id: photo.id,

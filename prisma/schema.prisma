@@ -25,6 +25,7 @@ model Group {
   adminUserId Int
   adminUser   User         @relation("GroupAdmin", fields: [adminUserId], references: [id])
   memberships Membership[]
+  albums      Album[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 }
@@ -47,11 +48,19 @@ enum MembershipRole {
   MEMBER
 }
 
+enum AlbumType {
+  PRIVATE
+  SHARED
+}
+
 model Album {
   id                      String         @id @default(cuid())
   userId                  String
   name                    String         @unique
   rootPath                String         @unique
+  albumType               AlbumType      @default(PRIVATE)
+  groupId                 Int?
+  group                   Group?         @relation(fields: [groupId], references: [id], onDelete: SetNull)
   plannedDividend         DateTime?
   createdTags             Json?
   requiredAtAlbumCreation Boolean        @default(false)
@@ -68,6 +77,7 @@ model PhotoStorage {
   storagePath    String
   photoCount     Int
   totalSizeBytes BigInt              @db.BigInt
+  tags           Json?
   createdAt      DateTime            @default(now())
   photos         PhotoStoragePhoto[]
 

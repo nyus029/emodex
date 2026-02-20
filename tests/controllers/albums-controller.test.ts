@@ -5,7 +5,7 @@ type AlbumFindUniqueResult = { id: string } | null | Record<string, unknown>;
 jest.mock('@/lib/auth0', () => ({
   auth0: {
     getSession: jest.fn(async () => ({
-      user: { sub: 'auth0|test-user' },
+      user: { sub: 'auth0|test-user', email: 'test@example.com' },
     })),
   },
 }));
@@ -30,9 +30,18 @@ const fakePrisma = {
   album: {
     create: (args: PrismaArgs) => handlers.albumCreate(args),
     findFirst: (args: PrismaArgs) => handlers.albumFindUnique(args),
+    findUnique: (args: PrismaArgs) => handlers.albumFindUnique(args),
+    findMany: async () => [],
   },
   photoStorage: {
     create: (args: PrismaArgs) => handlers.photoStorageCreate(args),
+  },
+  user: {
+    findUnique: async () => null,
+  },
+  membership: {
+    findUnique: async () => null,
+    findMany: async () => [],
   },
   systemAdministrator: {},
 };
@@ -93,6 +102,7 @@ type PhotoStorageRecord = {
   storagePath: string;
   photoCount: number;
   totalSizeBytes: bigint;
+  tags: unknown;
   createdAt: Date;
   photos: PhotoRecord[];
 };
@@ -102,6 +112,9 @@ type AlbumRecord = {
   userId: string;
   name: string;
   rootPath: string;
+  albumType: string;
+  groupId: number | null;
+  group: null;
   plannedDividend: Date | null;
   createdTags: unknown;
   requiredAtAlbumCreation: boolean;
@@ -122,6 +135,8 @@ function setupInMemoryHandlers() {
         userId: string;
         name: string;
         rootPath: string;
+        albumType?: string;
+        groupId?: number | null;
         plannedDividend?: Date | null;
         createdTags?: unknown;
         requiredAtAlbumCreation?: boolean;
@@ -144,6 +159,9 @@ function setupInMemoryHandlers() {
         userId: payload.userId,
         name: payload.name,
         rootPath: payload.rootPath,
+        albumType: payload.albumType ?? 'PRIVATE',
+        groupId: payload.groupId ?? null,
+        group: null,
         plannedDividend: payload.plannedDividend ?? null,
         createdTags: payload.createdTags ?? [],
         requiredAtAlbumCreation: payload.requiredAtAlbumCreation ?? false,
@@ -158,7 +176,7 @@ function setupInMemoryHandlers() {
         photoStorages: [],
       };
     },
-    albumFindUnique: async ({ where, select }: PrismaArgs) => {
+    albumFindUnique: async ({ where, select, include }: PrismaArgs) => {
       const id = (where as { id: string }).id;
       const userId = (where as { userId?: string }).userId;
       const album = albums.find(
@@ -181,6 +199,14 @@ function setupInMemoryHandlers() {
         };
       }
 
+      const includeOpts = include as
+        | { group?: boolean; photoStorages?: unknown }
+        | undefined;
+
+      if (includeOpts?.group && !includeOpts?.photoStorages) {
+        return { ...album, group: null };
+      }
+
       const sortedStorages = [...album.photoStorages].sort(
         (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
       );
@@ -201,6 +227,7 @@ function setupInMemoryHandlers() {
         storagePath: string;
         photoCount: number;
         totalSizeBytes: number | bigint;
+        tags?: unknown;
         photos: {
           create: Array<{
             fileName: string;
@@ -246,6 +273,7 @@ function setupInMemoryHandlers() {
           typeof payload.totalSizeBytes === 'bigint'
             ? payload.totalSizeBytes
             : BigInt(payload.totalSizeBytes),
+        tags: payload.tags ?? [],
         createdAt,
         photos,
       };
@@ -324,7 +352,14 @@ describe('albums controllers', () => {
   it('photo-storages POST returns 400 when blob path has no storage dir (controller unit)', async () => {
     const { postPhotoStorage } = await routesPromise;
     setHandlers({
-      albumFindUnique: async () => ({ id: 'album-1' }),
+      albumFindUnique: async () => ({
+        id: 'album-1',
+        userId: 'auth0|test-user',
+        albumType: 'PRIVATE',
+        groupId: null,
+        group: null,
+        rootPath: 'album',
+      }),
     });
 
     const response = await postPhotoStorage(

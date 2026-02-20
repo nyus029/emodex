@@ -613,6 +613,26 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
   /api/v1/albums:
+    get:
+      tags:
+        - Albums
+      summary: List accessible albums
+      description: Returns albums owned by the user and shared albums from groups the user belongs to.
+      responses:
+        '200':
+          description: Album list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AlbumListItem'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     post:
       tags:
         - Albums
@@ -632,6 +652,12 @@ paths:
                 $ref: '#/components/schemas/Album'
         '400':
           description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Not a member of the specified group
           content:
             application/json:
               schema:
@@ -704,6 +730,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AlbumInsightResponse'
+  /api/v1/groups:
+    get:
+      tags:
+        - Groups
+      summary: List groups for the current user (Auth0 session)
+      description: Returns groups the authenticated user belongs to, using Auth0 session for authentication.
+      responses:
+        '200':
+          description: Group list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MyGroup'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
   schemas:
     HealthResponse:
@@ -778,6 +825,21 @@ components:
       enum:
         - ADMIN
         - MEMBER
+    MyGroup:
+      type: object
+      required:
+        - groupId
+        - groupName
+        - myRole
+      properties:
+        groupId:
+          type: integer
+          example: 1
+        groupName:
+          type: string
+          example: Product Launch Team
+        myRole:
+          $ref: '#/components/schemas/MembershipRole'
     CreateGroupRequest:
       type: object
       required:
@@ -837,12 +899,64 @@ components:
           maxItems: 100
           items:
             $ref: '#/components/schemas/PhotoStorage'
+    AlbumType:
+      type: string
+      enum:
+        - PRIVATE
+        - SHARED
+    AlbumListItem:
+      type: object
+      required:
+        - id
+        - name
+        - albumType
+        - rootPath
+        - groupId
+        - groupName
+        - createdTags
+        - photoStorageCount
+      properties:
+        id:
+          type: string
+          example: abc123
+        name:
+          type: string
+          example: 家族アルバム
+        albumType:
+          $ref: '#/components/schemas/AlbumType'
+        rootPath:
+          type: string
+          example: 家族アルバム
+        groupId:
+          type:
+            - integer
+            - 'null'
+          example: null
+        groupName:
+          type:
+            - string
+            - 'null'
+          example: null
+        createdTags:
+          type: array
+          items:
+            type: string
+          example:
+            - 家族
+            - 旅行
+        photoStorageCount:
+          type: integer
+          minimum: 0
+          example: 3
     AlbumBasicInfo:
       type: object
       required:
         - albumName
         - createdAt
         - rootPath
+        - albumType
+        - groupId
+        - groupName
         - plannedDividend
         - createdTags
         - requiredAtAlbumCreation
@@ -857,6 +971,18 @@ components:
         rootPath:
           type: string
           example: 家族アルバム
+        albumType:
+          $ref: '#/components/schemas/AlbumType'
+        groupId:
+          type:
+            - integer
+            - 'null'
+          example: null
+        groupName:
+          type:
+            - string
+            - 'null'
+          example: null
         plannedDividend:
           type:
             - string
@@ -909,6 +1035,7 @@ components:
         - storagePath
         - photoCount
         - totalSizeBytes
+        - tags
         - createdAt
         - photos
       properties:
@@ -930,6 +1057,13 @@ components:
           format: int64
           minimum: 1
           example: 8123456
+        tags:
+          type: array
+          items:
+            type: string
+          example:
+            - 旅行
+            - 家族
         createdAt:
           type: string
           format: date-time
@@ -981,6 +1115,12 @@ components:
           minLength: 1
           maxLength: 120
           example: 家族アルバム
+        albumType:
+          $ref: '#/components/schemas/AlbumType'
+        groupId:
+          type: integer
+          description: Required when albumType is SHARED
+          example: 1
         plannedDividend:
           type: string
           format: date-time
@@ -1008,6 +1148,15 @@ components:
           minLength: 1
           maxLength: 120
           example: 2026-02-旅行
+        tags:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            maxLength: 50
+          example:
+            - 旅行
+            - 家族
         files:
           type: array
           minItems: 1
