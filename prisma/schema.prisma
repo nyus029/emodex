@@ -13,3 +13,44 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model Album {
+  id                      String         @id @default(cuid())
+  name                    String         @unique
+  rootPath                String         @unique
+  plannedDividend         DateTime?
+  createdTags             Json?
+  requiredAtAlbumCreation Boolean        @default(false)
+  createdAt               DateTime       @default(now())
+  updatedAt               DateTime       @updatedAt
+  photoStorages           PhotoStorage[]
+}
+
+model PhotoStorage {
+  id             String              @id @default(cuid())
+  albumId        String
+  album          Album               @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  name           String
+  storagePath    String
+  photoCount     Int
+  totalSizeBytes Int
+  createdAt      DateTime            @default(now())
+  photos         PhotoStoragePhoto[]
+
+  @@index([albumId, createdAt])
+  @@unique([albumId, name])
+}
+
+model PhotoStoragePhoto {
+  id             String       @id @default(cuid())
+  photoStorageId String
+  photoStorage   PhotoStorage @relation(fields: [photoStorageId], references: [id], onDelete: Cascade)
+  fileName       String
+  blobPath       String
+  blobUrl        String
+  contentType    String?
+  sizeBytes      Int
+  createdAt      DateTime     @default(now())
+
+  @@index([photoStorageId, createdAt])
+}

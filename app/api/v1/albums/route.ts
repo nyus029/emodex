@@ -1,0 +1,55 @@
+import { NextResponse } from 'next/server';
+import { z } from 'zod';
+import { prisma } from '@/lib/prisma';
+import { toAlbumResponse } from '@/lib/albums';
+import { toPathSegment } from '@/lib/path';
+
+const createAlbumSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  plannedDividend: z.string().datetime().optional(),
+  createdTags: z.array(z.string().trim().min(1).max(50)).max(50).optional(),
+  requiredAtAlbumCreation: z.boolean().optional(),
+});
+
+export async function POST(request: Request) {
+  const rawBody = (await request.json().catch(() => null)) as unknown;
+  const parsed = createAlbumSchema.safeParse(rawBody);
+
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: 'Invalid request body', details: parsed.error.flatten() },
+      { status: 400 },
+    );
+  }
+
+  const { name, plannedDividend, createdTags, requiredAtAlbumCreation } =
+    parsed.data;
+
+  const rootPath = toPathSegment(name);
+
+  try {
+    const album = await prisma.album.create({
+      data: {
+        name,
+        rootPath,
+        plannedDividend: plannedDividend ? new Date(plannedDividend) : null,
+        createdTags: createdTags ?? [],
+        requiredAtAlbumCreation: requiredAtAlbumCreation ?? false,
+      },
+      include: {
+        photoStorages: {
+          include: {
+            photos: true,
+          },
+        },
+      },
+    });
+
+    return NextResponse.json(toAlbumResponse(album), { status: 201 });
+  } catch {
+    return NextResponse.json(
+      { error: '同じアルバム名（またはルートパス）が既に存在します' },
+      { status: 409 },
+    );
+  }
+}
