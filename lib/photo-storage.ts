@@ -7,7 +7,7 @@ export const createPhotoStorageSchema = z.object({
       z.object({
         fileName: z.string().trim().min(1).max(191),
         blobPath: z.string().trim().min(1).max(191),
-        blobUrl: z.string().url().max(191),
+        blobUrl: z.string().url().max(2048),
         contentType: z.string().trim().min(1).max(191).optional(),
         sizeBytes: z
           .number()

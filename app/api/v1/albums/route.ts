@@ -9,7 +9,7 @@ import { toPathSegment } from '@/lib/path';
 const createAlbumSchema = z.object({
   name: z.string().trim().min(1).max(120),
   plannedDividend: z.string().datetime().optional(),
-  createdTags: z.array(z.string().trim().min(1).max(50)).max(50).optional(),
+  createdTags: z.array(z.string().trim().min(1).max(50)).max(20).optional(),
   requiredAtAlbumCreation: z.boolean().optional(),
 });
 

@@ -82,7 +82,7 @@ CREATE TABLE `PhotoStoragePhoto` (
   `photoStorageId` VARCHAR(191) NOT NULL,
   `fileName` VARCHAR(191) NOT NULL,
   `blobPath` VARCHAR(191) NOT NULL,
-  `blobUrl` VARCHAR(191) NOT NULL,
+  `blobUrl` TEXT NOT NULL,
   `contentType` VARCHAR(191) NULL,
   `sizeBytes` BIGINT NOT NULL,
   `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -201,4 +201,3 @@ ALTER TABLE `PhotoStoragePhoto`
   FOREIGN KEY (`photoStorageId`) REFERENCES `PhotoStorage`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 DROP TABLE `PhotoStorageMigrationMap`;
-DROP TABLE `PhotoStorage_old`;
