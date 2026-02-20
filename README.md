@@ -125,6 +125,22 @@ OPENAI_MODEL=openai/gpt-5-codex
 - Swagger UI: `/api/docs`（上記 YAML を読み込み）
 - 仕様を更新したら `public/doc/api/openapi.yaml` を編集し、`npm run openapi:validate` で整合性を検証してください。
 
+### Albums API（追加実装）
+
+- `POST /api/v1/albums`: アルバムを作成
+- `POST /api/v1/albums/{id}/photo-storages`: 直接アップロード済み Blob パス群を `photo_storage` として保存
+- `GET /api/v1/albums/{id}`: アルバム基本情報 + フォトストレージ一覧/集計を取得
+- クライアント直接アップロード用トークン発行: `POST /api/blob/upload`
+
+## 管理者インターフェース
+
+- 画面: `/admin`
+- 集約データ API: `GET /api/admin/overview`
+- system administrator 管理 API: `GET/POST/DELETE /api/admin/system-administrators`
+
+`/admin` は `SystemAdministrator` テーブルに登録された `User.id` のみアクセスできます。  
+初回登録前（`SystemAdministrator` が 0 件）のみ、`.env` の `SYSTEM_ADMIN_BOOTSTRAP_EMAILS` に含まれる email でアクセスし、管理者を追加できます。
+
 ## 接続確認 API
 
 DB のヘルスチェック:

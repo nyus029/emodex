@@ -1,4 +1,8 @@
 import { NextResponse } from 'next/server';
+import { auth0 } from '@/lib/auth0';
+import { toAlbumResponse } from '@/lib/albums';
+import { findAccessibleAlbum } from '@/lib/album-access';
+import { prisma } from '@/lib/prisma';
 
 type RouteContext = {
   params: Promise<{
@@ -7,34 +11,47 @@ type RouteContext = {
 };
 
 export async function GET(_request: Request, context: RouteContext) {
+  const session = await auth0.getSession();
+  const userId = session?.user?.sub;
+  const userEmail = session?.user?.email as string | undefined;
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const { id } = await context.params;
 
-  const mockAlbum = {
+  const accessibleAlbum = await findAccessibleAlbum(
     id,
-    albumBasicInfo: {
-      albumName: '思い出アルバム',
-      createdAt: '2026-02-13T00:00:00.000Z',
-      plannedDividend: '2026-03-31',
-      createdTags: ['家族', '旅行', 'イベント'],
-      requiredAtAlbumCreation: true,
-    },
-    updateNotification: {
-      addedFolderHistory: [
-        {
-          folderName: '2026_01_京都旅行',
-          addedAt: '2026-01-15T09:30:00.000Z',
-        },
-        {
-          folderName: '2026_02_誕生日会',
-          addedAt: '2026-02-10T14:20:00.000Z',
-        },
-      ],
-    },
-    dividendNotification: {
-      recordedAtTransaction: true,
-      dividendDates: ['2025-12-31', '2026-01-31', '2026-02-12'],
-    },
-  };
+    userId,
+    userEmail ?? '',
+  );
 
-  return NextResponse.json(mockAlbum, { status: 200 });
+  if (!accessibleAlbum) {
+    return NextResponse.json({ error: 'Album not found' }, { status: 404 });
+  }
+
+  const album = await prisma.album.findUnique({
+    where: { id },
+    include: {
+      group: true,
+      photoStorages: {
+        orderBy: {
+          createdAt: 'desc',
+        },
+        include: {
+          photos: {
+            orderBy: {
+              createdAt: 'asc',
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!album) {
+    return NextResponse.json({ error: 'Album not found' }, { status: 404 });
+  }
+
+  return NextResponse.json(toAlbumResponse(album), { status: 200 });
 }

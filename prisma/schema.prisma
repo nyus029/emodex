@@ -15,6 +15,8 @@ model User {
   updatedAt DateTime @updatedAt
   memberships Membership[]
   adminGroups Group[] @relation("GroupAdmin")
+  systemAdministrator SystemAdministrator?
+  createdSystemAdministrators SystemAdministrator[] @relation("SystemAdministratorCreatedBy")
 }
 
 model Group {
@@ -23,6 +25,7 @@ model Group {
   adminUserId Int
   adminUser   User         @relation("GroupAdmin", fields: [adminUserId], references: [id])
   memberships Membership[]
+  albums      Album[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 }
@@ -43,4 +46,64 @@ model Membership {
 enum MembershipRole {
   ADMIN
   MEMBER
+}
+
+enum AlbumType {
+  PRIVATE
+  SHARED
+}
+
+model Album {
+  id                      String         @id @default(cuid())
+  userId                  String
+  name                    String         @unique
+  rootPath                String         @unique
+  albumType               AlbumType      @default(PRIVATE)
+  groupId                 Int?
+  group                   Group?         @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  plannedDividend         DateTime?
+  createdTags             Json?
+  requiredAtAlbumCreation Boolean        @default(false)
+  createdAt               DateTime       @default(now())
+  updatedAt               DateTime       @updatedAt
+  photoStorages           PhotoStorage[]
+}
+
+model PhotoStorage {
+  id             String              @id @default(cuid())
+  albumId        String
+  album          Album               @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  name           String
+  storagePath    String
+  photoCount     Int
+  totalSizeBytes BigInt              @db.BigInt
+  tags           Json?
+  createdAt      DateTime            @default(now())
+  photos         PhotoStoragePhoto[]
+
+  @@index([albumId, createdAt])
+  @@unique([albumId, name])
+}
+
+model PhotoStoragePhoto {
+  id             String       @id @default(cuid())
+  photoStorageId String
+  photoStorage   PhotoStorage @relation(fields: [photoStorageId], references: [id], onDelete: Cascade)
+  fileName       String
+  blobPath       String
+  blobUrl        String       @db.Text
+  contentType    String?
+  sizeBytes      BigInt       @db.BigInt
+  createdAt      DateTime     @default(now())
+
+  @@index([photoStorageId, createdAt])
+}
+
+model SystemAdministrator {
+  id              String  @id @default(cuid())
+  userId          Int     @unique
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdByUserId Int?
+  createdByUser   User?   @relation("SystemAdministratorCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdAt       DateTime @default(now())
 }
