@@ -15,7 +15,7 @@ This file augments `AGENTS.md` for the Codex agent. Follow these notes first whe
 
 - 品質チェック: `npm run lint`, `npm run build`, `npm run openapi:validate`
 - 構成確認: `find . -maxdepth 3 -type d | sort | rg -v '^\./(node_modules|\\.git|\\.next)($|/)'`
-- 設定・テンプレート一覧: `find .github .cursor .claude .agents .husky .vscode -maxdepth 4 -type f | sort`
+- 設定・テンプレート一覧: `find .github .cursor .claude .agents .husky .vscode -maxdepth 4 -type f -not -path './.github/agents/*' | sort`
 - 主要ファイルの確認: `nl -ba README.md | sed -n '1,240p'`, `nl -ba .github/PULL_REQUEST_TEMPLATE.md | sed -n '1,260p'`
 - 画面/API 主要箇所: `nl -ba app/page.tsx | sed -n '1,120p'`, `nl -ba app/api/chat/stream/route.ts | sed -n '1,240p'`
 - Mastra 主要箇所: `nl -ba mastra/index.ts | sed -n '1,220p'`, `nl -ba mastra/agents/chat-agent.ts | sed -n '1,220p'`
