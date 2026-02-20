@@ -861,7 +861,8 @@ components:
           type:
             - string
             - 'null'
-          example: '2026-03-31'
+          format: date-time
+          example: '2026-03-31T00:00:00.000Z'
         createdTags:
           type: array
           items:
