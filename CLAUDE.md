@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **emodex** is a Next.js 16 + Mastra application. It combines a React 19 frontend (App Router), a REST API layer, Mastra AI agents/workflows, and a MySQL database accessed via Prisma.
 
 Key capabilities:
+
 - Streaming chat powered by Mastra agents (OpenAI Codex by default, mock fallback when no API key)
 - Weather agent and workflow (Open-Meteo API, no key required)
 - Groups and memberships API (CRUD, Auth0-authenticated)
@@ -37,18 +38,18 @@ npm run db:seed
 
 ## Technology Stack
 
-| Layer | Technology |
-|---|---|
-| Language / Runtime | TypeScript + Node.js >= 22.12.0 |
-| Frontend | Next.js 16 + React 19 (App Router) |
-| AI / Agents | Mastra (`@mastra/core`, `mastra`, `@mastra/memory`, `@mastra/observability`) |
-| Database | MySQL 8.4 (Docker) + Prisma 7 |
-| Auth | Auth0 (`@auth0/nextjs-auth0`) |
-| Styling | Tailwind CSS v4 + PostCSS |
-| PWA | `next-pwa` + Service Worker (`public/push-sw.js`) |
-| Validation | Zod v4 |
-| Testing | Jest + Testing Library |
-| Quality | ESLint + Prettier + Husky + lint-staged |
+| Layer              | Technology                                                                   |
+| ------------------ | ---------------------------------------------------------------------------- |
+| Language / Runtime | TypeScript + Node.js >= 22.12.0                                              |
+| Frontend           | Next.js 16 + React 19 (App Router)                                           |
+| AI / Agents        | Mastra (`@mastra/core`, `mastra`, `@mastra/memory`, `@mastra/observability`) |
+| Database           | MySQL 8.4 (Docker) + Prisma 7                                                |
+| Auth               | Auth0 (`@auth0/nextjs-auth0`)                                                |
+| Styling            | Tailwind CSS v4 + PostCSS                                                    |
+| PWA                | `next-pwa` + Service Worker (`public/push-sw.js`)                            |
+| Validation         | Zod v4                                                                       |
+| Testing            | Jest + Testing Library                                                       |
+| Quality            | ESLint + Prettier + Husky + lint-staged                                      |
 
 ---
 
@@ -125,27 +126,27 @@ emodex/
 
 ## npm Scripts Reference
 
-| Script | Purpose |
-|---|---|
-| `npm run dev` | Next.js dev server (webpack mode) |
-| `npm run build` | Production build (runs `prisma generate` first) |
-| `npm run start` | Start production server |
-| `npm run test` | Run Jest tests |
-| `npm run test:watch` | Jest in watch mode |
-| `npm run lint` | ESLint |
-| `npm run format` | Prettier write |
-| `npm run format:check` | Prettier check (used in CI) |
-| `npm run openapi:validate` | Validate `public/doc/api/openapi.yaml` |
-| `npm run db:up` | Start MySQL container |
-| `npm run db:down` | Stop MySQL container |
-| `npm run db:logs` | Tail MySQL logs |
-| `npm run db:generate` | Generate Prisma client |
-| `npm run db:migrate` | Apply pending migrations (deploy mode) |
-| `npm run db:migrate:dev` | Create + apply new migration (dev mode) |
-| `npm run db:migrate:reset` | Reset DB + re-run migrations |
+| Script                       | Purpose                                                    |
+| ---------------------------- | ---------------------------------------------------------- |
+| `npm run dev`                | Next.js dev server (webpack mode)                          |
+| `npm run build`              | Production build (runs `prisma generate` first)            |
+| `npm run start`              | Start production server                                    |
+| `npm run test`               | Run Jest tests                                             |
+| `npm run test:watch`         | Jest in watch mode                                         |
+| `npm run lint`               | ESLint                                                     |
+| `npm run format`             | Prettier write                                             |
+| `npm run format:check`       | Prettier check (used in CI)                                |
+| `npm run openapi:validate`   | Validate `public/doc/api/openapi.yaml`                     |
+| `npm run db:up`              | Start MySQL container                                      |
+| `npm run db:down`            | Stop MySQL container                                       |
+| `npm run db:logs`            | Tail MySQL logs                                            |
+| `npm run db:generate`        | Generate Prisma client                                     |
+| `npm run db:migrate`         | Apply pending migrations (deploy mode)                     |
+| `npm run db:migrate:dev`     | Create + apply new migration (dev mode)                    |
+| `npm run db:migrate:reset`   | Reset DB + re-run migrations                               |
 | `npm run db:migrate:resolve` | Mark initial migration as applied (fixes post-reset drift) |
-| `npm run db:seed` | Seed 10 mock users |
-| `npm run db:studio` | Prisma Studio UI |
+| `npm run db:seed`            | Seed 10 mock users                                         |
+| `npm run db:studio`          | Prisma Studio UI                                           |
 
 ---
 
@@ -185,10 +186,10 @@ MASTRA_CLOUD_ACCESS_TOKEN=
 
 ### Schema Models
 
-| Model | Key fields |
-|---|---|
-| `User` | `id`, `email` (unique), `name`, `picture?`, timestamps |
-| `Group` | `id`, `groupName`, `adminUserId` → User, timestamps |
+| Model        | Key fields                                                                                |
+| ------------ | ----------------------------------------------------------------------------------------- |
+| `User`       | `id`, `email` (unique), `name`, `picture?`, timestamps                                    |
+| `Group`      | `id`, `groupName`, `adminUserId` → User, timestamps                                       |
 | `Membership` | `id`, `userId`, `groupId`, `role` (ADMIN\|MEMBER), timestamps; unique `(userId, groupId)` |
 
 ### Migration Workflow
@@ -209,21 +210,21 @@ All Mastra code lives in `mastra/`. The entry point `mastra/index.ts` creates th
 
 ### Agents
 
-| Agent | File | Model | Tools | Notes |
-|---|---|---|---|---|
-| `chatAgent` | `mastra/agents/chat-agent.ts` | `OPENAI_MODEL` env (default `openai/gpt-5-codex`) | none | Memory enabled; used by streaming chat API |
-| `weatherAgent` | `mastra/agents/weather-agent.ts` | `openai/gpt-4o` | `weatherTool` | Memory enabled; used inside `weatherWorkflow` |
+| Agent          | File                             | Model                                             | Tools         | Notes                                         |
+| -------------- | -------------------------------- | ------------------------------------------------- | ------------- | --------------------------------------------- |
+| `chatAgent`    | `mastra/agents/chat-agent.ts`    | `OPENAI_MODEL` env (default `openai/gpt-5-codex`) | none          | Memory enabled; used by streaming chat API    |
+| `weatherAgent` | `mastra/agents/weather-agent.ts` | `openai/gpt-4o`                                   | `weatherTool` | Memory enabled; used inside `weatherWorkflow` |
 
 ### Tools
 
-| Tool | File | Description |
-|---|---|---|
+| Tool                          | File                           | Description                                                                 |
+| ----------------------------- | ------------------------------ | --------------------------------------------------------------------------- |
 | `weatherTool` (`get-weather`) | `mastra/tools/weather-tool.ts` | Fetches current weather for a city via Open-Meteo geocoding + forecast APIs |
 
 ### Workflows
 
-| Workflow | File | Steps |
-|---|---|---|
+| Workflow          | File                                   | Steps                                                                               |
+| ----------------- | -------------------------------------- | ----------------------------------------------------------------------------------- |
 | `weatherWorkflow` | `mastra/workflows/weather-workflow.ts` | `fetchWeather` → `planActivities` (streams activity suggestions via `weatherAgent`) |
 
 ### Adding a New Agent
@@ -248,6 +249,7 @@ components/**       →  reusable, display-only UI parts
 ```
 
 **Rules:**
+
 - `page.tsx` files must only import and render their `Feature` component — no logic.
 - `features/` orchestrates state and API calls; imports from `components/`.
 - `components/` must not import from `features/` (one-way dependency).
@@ -279,6 +281,7 @@ components/**       →  reusable, display-only UI parts
 ## Observability
 
 Mastra is configured with:
+
 - `PinoLogger` (name `Mastra`, level `info`) → structured logging
 - `LibSQLStore` → persists traces/scores to `mastra.db` (local file)
 - `DefaultExporter` → persists traces to storage (visible in Mastra Studio)
@@ -309,6 +312,7 @@ CI runs on PRs targeting `develop` branch (`.github/workflows/ci.yml`):
 Pre-commit hook (Husky + lint-staged) runs Prettier on staged `js/ts/json/css/md` files.
 
 **Before opening a PR, run locally:**
+
 ```bash
 npm run lint
 npm run format:check
@@ -320,6 +324,7 @@ npm run openapi:validate
 ## Pull Request Conventions
 
 Use `.github/PULL_REQUEST_TEMPLATE.md` without changing its section structure. Fill in:
+
 - **目的** (Purpose): what the PR enables
 - **方針** (Approach): design decisions and trade-offs
 - **実装** (Implementation, optional): implementation notes for reviewers
