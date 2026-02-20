@@ -1,7 +1,6 @@
 import { Auth0Client } from '@auth0/nextjs-auth0/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import type { Prisma } from '@prisma/client';
 
 export async function GET(req: NextRequest) {
   try {
@@ -41,7 +40,7 @@ export async function GET(req: NextRequest) {
         create: createData,
       });
 
-      console.log('✅ User saved to database:', dbUser);
+      console.log('✅ User saved to database:', { id: dbUser.id });
     }
 
     return response;

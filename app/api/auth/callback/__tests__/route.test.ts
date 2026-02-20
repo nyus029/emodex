@@ -18,7 +18,11 @@ jest.mock('@/lib/prisma', () => ({
 }));
 
 describe('Auth Callback Route - GET /api/auth/callback', () => {
-  let mockClient: any;
+  type MockAuth0Client = {
+    middleware: jest.Mock;
+    getSession: jest.Mock;
+  };
+  let mockClient: MockAuth0Client;
   let mockRequest: NextRequest;
 
   beforeEach(() => {

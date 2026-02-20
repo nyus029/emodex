@@ -10,7 +10,9 @@ export default function AuthTestSetComponent() {
   const { user, isLoading } = useUser();
 
   useEffect(() => {
-    console.log('ユーザーデータ:', user);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('ユーザーデータ:', user);
+    }
   }, [user]);
 
   return (
@@ -20,8 +22,9 @@ export default function AuthTestSetComponent() {
         ログイン・ログアウトとプロフィール表示の動作確認用です。
       </p>
       {isLoading && <p className="auth-test-loading">認証状態を取得中...</p>}
-      <p>{JSON.stringify(user)}</p>
-      console.log('ユーザーデータ:', user);
+      {process.env.NODE_ENV === 'development' && (
+        <pre className="auth-test-debug">{JSON.stringify(user, null, 2)}</pre>
+      )}
       {!isLoading && !user && (
         <section className="auth-test-section">
           <h2>未ログイン</h2>
