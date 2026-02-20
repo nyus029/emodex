@@ -14,6 +14,15 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --color-test: #253758;
+  --color-black: #1e2836;
+  --color-gray: #7a7a7a;
+  --color-green: #237440;
+  --color-light-green: #58e18a;
+  --color-gray-green: #afc9c5;
+  --color-light-gray: #f3f4f6;
+  --color-white: #ffffff;
+  --color-background-light: #f6f6f8;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -27,4 +36,11 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* =========================
+   Card Shadow (Figma: card)
+========================= */
+.shadow-card {
+  box-shadow: 0 0 8px 2px #e9edf3;
 }
