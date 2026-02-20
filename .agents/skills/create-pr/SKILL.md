@@ -126,6 +126,4 @@ gh pr checks <PR番号> --watch --fail-fast --interval 15
 ## 参照
 
 - `templates/pr-body.md`
-- `review-auto-fix.md`
 - `reviewing-docs` スキル
-- `reviewing-pr` スキル
