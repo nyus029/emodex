@@ -47,14 +47,17 @@ enum MembershipRole {
 model Album {
   id                      String         @id @default(cuid())
   userId                  String
-  name                    String         @unique
-  rootPath                String         @unique
+  name                    String
+  rootPath                String
   plannedDividend         DateTime?
   createdTags             Json?
   requiredAtAlbumCreation Boolean        @default(false)
   createdAt               DateTime       @default(now())
   updatedAt               DateTime       @updatedAt
   photoStorages           PhotoStorage[]
+
+  @@unique([userId, name])
+  @@unique([userId, rootPath])
 }
 
 model PhotoStorage {

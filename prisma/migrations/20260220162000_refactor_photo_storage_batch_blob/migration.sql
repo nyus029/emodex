@@ -29,11 +29,11 @@ UPDATE `Album`
 SET `rootPath` = CONCAT('untitled-', RIGHT(`id`, 8))
 WHERE `rootPath` IS NULL OR `rootPath` = '';
 
--- De-duplicate Album.name before creating unique index
+-- De-duplicate Album.name within each user before creating unique index
 WITH ranked_album_name AS (
   SELECT
     `id`,
-    ROW_NUMBER() OVER (PARTITION BY `name` ORDER BY `id`) AS rn
+    ROW_NUMBER() OVER (PARTITION BY `userId`, `name` ORDER BY `id`) AS rn
   FROM `Album`
 )
 UPDATE `Album` a
@@ -41,11 +41,11 @@ JOIN ranked_album_name r ON a.`id` = r.`id`
 SET a.`name` = CONCAT(a.`name`, '-', RIGHT(a.`id`, 8))
 WHERE r.rn > 1;
 
--- De-duplicate Album.rootPath before creating unique index
+-- De-duplicate Album.rootPath within each user before creating unique index
 WITH ranked_album_root_path AS (
   SELECT
     `id`,
-    ROW_NUMBER() OVER (PARTITION BY `rootPath` ORDER BY `id`) AS rn
+    ROW_NUMBER() OVER (PARTITION BY `userId`, `rootPath` ORDER BY `id`) AS rn
   FROM `Album`
 )
 UPDATE `Album` a
@@ -57,8 +57,8 @@ ALTER TABLE `Album`
   MODIFY `userId` VARCHAR(191) NOT NULL,
   MODIFY `rootPath` VARCHAR(191) NOT NULL;
 
-CREATE UNIQUE INDEX `Album_name_key` ON `Album`(`name`);
-CREATE UNIQUE INDEX `Album_rootPath_key` ON `Album`(`rootPath`);
+CREATE UNIQUE INDEX `Album_userId_name_key` ON `Album`(`userId`, `name`);
+CREATE UNIQUE INDEX `Album_userId_rootPath_key` ON `Album`(`userId`, `rootPath`);
 
 -- Preserve legacy PhotoStorage rows
 RENAME TABLE `PhotoStorage` TO `PhotoStorage_old`;
