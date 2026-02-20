@@ -80,7 +80,9 @@ describe('system-administrators route', () => {
       user: { email: 'admin@example.com' },
     });
     (getSystemAdministratorAccessByEmail as jest.Mock).mockResolvedValue({
+      hasAccess: true,
       isRegisteredAdmin: true,
+      isBootstrapAdmin: false,
       currentUser: { id: 1, email: 'admin@example.com' },
     });
     (prisma.user.findUnique as jest.Mock).mockResolvedValue({ id: 1 });
