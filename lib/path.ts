@@ -3,7 +3,8 @@ export function toPathSegment(value: string): string {
     .trim()
     .replace(/[\\/]+/g, '-')
     .replace(/\s+/g, '-')
-    .replace(/-+/g, '-');
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
 
   return normalized || 'untitled';
 }

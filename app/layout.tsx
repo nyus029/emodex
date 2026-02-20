@@ -12,7 +12,9 @@ export const metadata: Metadata = {
     title: 'Emodex',
   },
   icons: {
-    apple: '/apple-icon',
+    icon: '/icon.svg',
+    shortcut: '/icon.svg',
+    apple: '/icon.svg',
   },
 };
 

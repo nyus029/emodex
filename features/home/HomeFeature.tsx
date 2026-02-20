@@ -9,40 +9,8 @@ import ChatForm from '@/components/chat/ChatForm';
 import ChatResponse from '@/components/chat/ChatResponse';
 import NotificationTest from '@/components/notification/NotificationTest';
 import AuthTestSetComponent from '@/components/auth/AuthTestSetComponent';
-
-type AlbumResponse = {
-  id: string;
-  albumBasicInfo: {
-    albumName: string;
-    rootPath: string;
-    createdAt: string;
-    plannedDividend: string | null;
-    createdTags: string[];
-    requiredAtAlbumCreation: boolean;
-  };
-  photoStorageSummary: {
-    totalStorages: number;
-    totalPhotos: number;
-    totalSizeBytes: number;
-    lastAddedAt: string | null;
-  };
-  photoStorages: Array<{
-    id: string;
-    name: string;
-    storagePath: string;
-    photoCount: number;
-    totalSizeBytes: number;
-    createdAt: string;
-    photos: Array<{
-      id: string;
-      fileName: string;
-      blobPath: string;
-      blobUrl: string;
-      contentType: string | null;
-      sizeBytes: number;
-    }>;
-  }>;
-};
+import type { AlbumResponse } from '@/lib/albums';
+import { toPathSegment } from '@/lib/path';
 
 const isPwaStandalone = () => {
   if (typeof window === 'undefined') return false;
@@ -52,16 +20,6 @@ const isPwaStandalone = () => {
     (window.navigator as Navigator & { standalone?: boolean }).standalone ===
       true
   );
-};
-
-const toPathSegment = (value: string) => {
-  const normalized = value
-    .trim()
-    .replace(/[\\/]+/g, '-')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-');
-
-  return normalized || 'untitled';
 };
 
 export default function HomeFeature() {
@@ -283,6 +241,21 @@ export default function HomeFeature() {
 
     setIsPhotoStorageAdding(true);
     setAlbumMessage('');
+    const uploadedBlobUrls: string[] = [];
+    let isCleanupDone = false;
+
+    const cleanupUploadedBlobs = async () => {
+      if (isCleanupDone || uploadedBlobUrls.length === 0) {
+        return;
+      }
+
+      isCleanupDone = true;
+      await fetch('/api/blob/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ urls: uploadedBlobUrls }),
+      }).catch(() => undefined);
+    };
 
     try {
       if (!album) {
@@ -301,6 +274,7 @@ export default function HomeFeature() {
               storagePath,
             }),
           });
+          uploadedBlobUrls.push(blob.url);
 
           return {
             fileName: file.name,
@@ -334,6 +308,7 @@ export default function HomeFeature() {
             };
           };
       if (!response.ok) {
+        await cleanupUploadedBlobs();
         throw new Error(
           'error' in payload
             ? (payload.error ?? 'フォト追加に失敗しました')
@@ -349,6 +324,7 @@ export default function HomeFeature() {
           : '画像を追加しました。',
       );
     } catch (error) {
+      await cleanupUploadedBlobs();
       setAlbumMessage(
         error instanceof Error ? error.message : 'フォト追加に失敗しました',
       );

@@ -10,4 +10,9 @@ describe('toPathSegment', () => {
     const result = toPathSegment('   ');
     expect(result).toBe('untitled');
   });
+
+  it('trims leading and trailing hyphens', () => {
+    const result = toPathSegment('/ test /');
+    expect(result).toBe('test');
+  });
 });

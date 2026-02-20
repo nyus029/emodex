@@ -1,7 +1,19 @@
 import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
 import { NextResponse } from 'next/server';
+import { auth0 } from '@/lib/auth0';
+import { prisma } from '@/lib/prisma';
+
+type UploadClientPayload = {
+  albumId?: string;
+};
 
 export async function POST(request: Request) {
+  const session = await auth0.getSession();
+  const userId = session?.user?.sub;
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const body = (await request
     .json()
     .catch(() => null)) as HandleUploadBody | null;
@@ -18,20 +30,27 @@ export async function POST(request: Request) {
       body,
       request,
       onBeforeGenerateToken: async (pathname, clientPayload) => {
-        if (!clientPayload) {
-          throw new Error('clientPayload is required');
+        const payload = clientPayload
+          ? (JSON.parse(clientPayload) as UploadClientPayload)
+          : null;
+        if (!payload?.albumId) {
+          throw new Error('albumId is required in clientPayload');
+        }
+        const album = await prisma.album.findFirst({
+          where: { id: payload.albumId, userId },
+          select: { rootPath: true },
+        });
+        if (!album) {
+          throw new Error('Album not found');
         }
 
-        const parsedPayload = JSON.parse(clientPayload) as {
-          storagePath?: string;
-        };
+        const normalizedPathname = pathname.startsWith('/')
+          ? pathname.slice(1)
+          : pathname;
+        const allowedPrefix = `${album.rootPath}/`;
 
-        if (!parsedPayload.storagePath) {
-          throw new Error('storagePath is required in clientPayload');
-        }
-
-        if (!pathname.startsWith(`${parsedPayload.storagePath}/`)) {
-          throw new Error('Invalid upload path');
+        if (!normalizedPathname.startsWith(allowedPrefix)) {
+          throw new Error('Invalid storage path');
         }
 
         return {

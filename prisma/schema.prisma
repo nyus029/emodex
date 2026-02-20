@@ -9,13 +9,45 @@ datasource db {
 model User {
   id        Int      @id @default(autoincrement())
   email     String   @unique
-  name      String?
+  name      String  
+  picture   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  memberships Membership[]
+  adminGroups Group[] @relation("GroupAdmin")
+}
+
+model Group {
+  id          Int          @id @default(autoincrement())
+  groupName   String
+  adminUserId Int
+  adminUser   User         @relation("GroupAdmin", fields: [adminUserId], references: [id])
+  memberships Membership[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Membership {
+  id        Int             @id @default(autoincrement())
+  userId    Int
+  groupId   Int
+  role      MembershipRole  @default(MEMBER)
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group     Group           @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@unique([userId, groupId])
+}
+
+enum MembershipRole {
+  ADMIN
+  MEMBER
 }
 
 model Album {
   id                      String         @id @default(cuid())
+  userId                  String
   name                    String         @unique
   rootPath                String         @unique
   plannedDividend         DateTime?
@@ -33,7 +65,7 @@ model PhotoStorage {
   name           String
   storagePath    String
   photoCount     Int
-  totalSizeBytes Int
+  totalSizeBytes BigInt              @db.BigInt
   createdAt      DateTime            @default(now())
   photos         PhotoStoragePhoto[]
 
@@ -47,9 +79,9 @@ model PhotoStoragePhoto {
   photoStorage   PhotoStorage @relation(fields: [photoStorageId], references: [id], onDelete: Cascade)
   fileName       String
   blobPath       String
-  blobUrl        String
+  blobUrl        String       @db.Text
   contentType    String?
-  sizeBytes      Int
+  sizeBytes      BigInt       @db.BigInt
   createdAt      DateTime     @default(now())
 
   @@index([photoStorageId, createdAt])
