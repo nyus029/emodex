@@ -1,7 +1,7 @@
 import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
 import { NextResponse } from 'next/server';
 import { auth0 } from '@/lib/auth0';
-import { prisma } from '@/lib/prisma';
+import { findAccessibleAlbum } from '@/lib/album-access';
 
 type UploadClientPayload = {
   albumId?: string;
@@ -10,6 +10,7 @@ type UploadClientPayload = {
 export async function POST(request: Request) {
   const session = await auth0.getSession();
   const userId = session?.user?.sub;
+  const userEmail = session?.user?.email as string | undefined;
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -36,10 +37,12 @@ export async function POST(request: Request) {
         if (!payload?.albumId) {
           throw new Error('albumId is required in clientPayload');
         }
-        const album = await prisma.album.findFirst({
-          where: { id: payload.albumId, userId },
-          select: { rootPath: true },
-        });
+
+        const album = await findAccessibleAlbum(
+          payload.albumId,
+          userId,
+          userEmail ?? '',
+        );
         if (!album) {
           throw new Error('Album not found');
         }

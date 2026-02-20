@@ -1,11 +1,13 @@
 import type {
   Album,
+  Group,
   PhotoStorage,
   PhotoStoragePhoto,
   Prisma,
 } from '@prisma/client';
 
 export type AlbumWithPhotoStorages = Album & {
+  group?: Group | null;
   photoStorages: Array<
     PhotoStorage & {
       photos: PhotoStoragePhoto[];
@@ -18,6 +20,9 @@ export type AlbumResponse = {
   albumBasicInfo: {
     albumName: string;
     rootPath: string;
+    albumType: 'PRIVATE' | 'SHARED';
+    groupId: number | null;
+    groupName: string | null;
     createdAt: string;
     plannedDividend: string | null;
     createdTags: string[];
@@ -35,6 +40,7 @@ export type AlbumResponse = {
     storagePath: string;
     photoCount: number;
     totalSizeBytes: number;
+    tags: string[];
     createdAt: string;
     photos: Array<{
       id: string;
@@ -45,6 +51,17 @@ export type AlbumResponse = {
       sizeBytes: number;
     }>;
   }>;
+};
+
+export type AlbumListItem = {
+  id: string;
+  name: string;
+  albumType: 'PRIVATE' | 'SHARED';
+  rootPath: string;
+  groupId: number | null;
+  groupName: string | null;
+  createdTags: string[];
+  photoStorageCount: number;
 };
 
 function toTagArray(tags: Prisma.JsonValue | null): string[] {
@@ -86,6 +103,9 @@ export function toAlbumResponse(album: AlbumWithPhotoStorages): AlbumResponse {
     albumBasicInfo: {
       albumName: album.name,
       rootPath: album.rootPath,
+      albumType: album.albumType,
+      groupId: album.groupId,
+      groupName: album.group?.groupName ?? null,
       createdAt: album.createdAt.toISOString(),
       plannedDividend: album.plannedDividend?.toISOString() ?? null,
       createdTags: toTagArray(album.createdTags),
@@ -103,6 +123,7 @@ export function toAlbumResponse(album: AlbumWithPhotoStorages): AlbumResponse {
       storagePath: photoStorage.storagePath,
       photoCount: photoStorage.photoCount,
       totalSizeBytes: toSafeInteger(photoStorage.totalSizeBytes),
+      tags: toTagArray(photoStorage.tags),
       createdAt: photoStorage.createdAt.toISOString(),
       photos: photoStorage.photos.map((photo) => ({
         id: photo.id,

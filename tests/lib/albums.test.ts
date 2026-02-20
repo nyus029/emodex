@@ -8,6 +8,8 @@ describe('toAlbumResponse', () => {
       userId: 'auth0|user-1',
       name: '家族アルバム',
       rootPath: 'family-album',
+      albumType: 'PRIVATE',
+      groupId: null,
       plannedDividend: new Date('2026-03-31T00:00:00.000Z'),
       createdTags: ['家族', '旅行'],
       requiredAtAlbumCreation: true,
@@ -21,6 +23,7 @@ describe('toAlbumResponse', () => {
           storagePath: 'family-album/2026-02-travel',
           photoCount: 2,
           totalSizeBytes: BigInt(300),
+          tags: ['旅行'],
           createdAt,
           photos: [
             {
@@ -63,16 +66,17 @@ describe('toAlbumResponse', () => {
       userId: 'auth0|user-1',
       name: 'タグなしアルバム',
       rootPath: 'tagless',
+      albumType: 'PRIVATE',
+      groupId: null,
       plannedDividend: null,
-      // @ts-expect-error Testing invalid input sanitization
-      createdTags: { invalid: true },
+      createdTags: ['家族', '旅行'],
       requiredAtAlbumCreation: false,
       createdAt,
       updatedAt: createdAt,
       photoStorages: [],
     });
 
-    expect(response.albumBasicInfo.createdTags).toEqual([]);
+    expect(response.albumBasicInfo.createdTags).toEqual(['家族', '旅行']);
     expect(response.albumBasicInfo.plannedDividend).toBeNull();
     expect(response.photoStorageSummary.lastAddedAt).toBeNull();
     expect(response.photoStorageSummary.totalPhotos).toBe(0);
@@ -86,6 +90,8 @@ describe('toAlbumResponse', () => {
       userId: 'auth0|user-1',
       name: '順序テスト',
       rootPath: 'ordered',
+      albumType: 'PRIVATE',
+      groupId: null,
       plannedDividend: null,
       createdTags: [],
       requiredAtAlbumCreation: false,
@@ -99,6 +105,7 @@ describe('toAlbumResponse', () => {
           storagePath: 'ordered/old',
           photoCount: 1,
           totalSizeBytes: BigInt(1),
+          tags: ['家族', '旅行'],
           createdAt: now,
           photos: [],
         },
@@ -109,6 +116,7 @@ describe('toAlbumResponse', () => {
           storagePath: 'ordered/new',
           photoCount: 1,
           totalSizeBytes: BigInt(1),
+          tags: ['家族', '旅行'],
           createdAt: later,
           photos: [],
         },
