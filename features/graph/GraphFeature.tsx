@@ -2,7 +2,12 @@
 
 import { useMemo } from 'react';
 import Link from 'next/link';
-import ExponentialChart from '@/components/graph/ExponentialChart';
+import dynamic from 'next/dynamic';
+
+const ExponentialChart = dynamic(
+  () => import('@/components/graph/ExponentialChart'),
+  { ssr: false },
+);
 
 type DataPoint = {
   time: number;

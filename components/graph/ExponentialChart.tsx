@@ -42,7 +42,9 @@ export default function ExponentialChart({ data }: ExponentialChartProps) {
           domain={['auto', 'auto']}
         />
         <Tooltip
-          formatter={(value: number) => [value.toFixed(2), '値']}
+          formatter={(value: number | undefined) =>
+            value !== undefined ? [value.toFixed(2), '値'] : ['', '値']
+          }
           labelFormatter={(label) => `${label}年`}
         />
         <Legend />
