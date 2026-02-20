@@ -125,6 +125,13 @@ OPENAI_MODEL=openai/gpt-5-codex
 - Swagger UI: `/api/docs`（上記 YAML を読み込み）
 - 仕様を更新したら `public/doc/api/openapi.yaml` を編集し、`npm run openapi:validate` で整合性を検証してください。
 
+### Albums API（追加実装）
+
+- `POST /api/v1/albums`: アルバムを作成
+- `POST /api/v1/albums/{id}/photo-storages`: 直接アップロード済み Blob パス群を `photo_storage` として保存
+- `GET /api/v1/albums/{id}`: アルバム基本情報 + フォトストレージ一覧/集計を取得
+- クライアント直接アップロード用トークン発行: `POST /api/blob/upload`
+
 ## 接続確認 API
 
 DB のヘルスチェック:

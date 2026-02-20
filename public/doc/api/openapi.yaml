@@ -74,6 +74,89 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/blob/upload:
+    post:
+      tags:
+        - Blob
+      summary: Generate client upload token for Vercel Blob
+      description: Used by `@vercel/blob/client upload()` for direct browser uploads.
+      responses:
+        '200':
+          description: Token generated
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - type
+                  - clientToken
+                properties:
+                  type:
+                    type: string
+                    example: blob.generate-client-token
+                  clientToken:
+                    type: string
+                    description: Token for direct browser upload.
+                    example: vercel_blob_client_token_xxx
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/blob/delete:
+    post:
+      tags:
+        - Blob
+      summary: Delete uploaded blobs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - urls
+              properties:
+                urls:
+                  type: array
+                  minItems: 1
+                  maxItems: 200
+                  items:
+                    type: string
+                    format: uri
+      responses:
+        '200':
+          description: Blobs deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - deleted
+                properties:
+                  deleted:
+                    type: integer
+                    minimum: 0
+                    example: 2
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/users/verify/{email}:
     get:
       tags:
@@ -523,6 +606,85 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Album'
+        '404':
+          description: Album not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/albums:
+    post:
+      tags:
+        - Albums
+      summary: Create album
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAlbumRequest'
+      responses:
+        '201':
+          description: Album created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Album'
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Album with same name already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/albums/{id}/photo-storages:
+    post:
+      tags:
+        - Albums
+      summary: Add photo storages to album in bulk
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Album identifier
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddPhotoStoragesRequest'
+      responses:
+        '201':
+          description: Photo storages added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddPhotoStoragesResponse'
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Album not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: photo_storage name conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/albums/insight/{id}:
     get:
       tags:
@@ -660,23 +822,27 @@ components:
       required:
         - id
         - albumBasicInfo
-        - updateNotification
-        - dividendNotification
+        - photoStorageSummary
+        - photoStorages
       properties:
         id:
           type: string
           example: abc123
         albumBasicInfo:
           $ref: '#/components/schemas/AlbumBasicInfo'
-        updateNotification:
-          $ref: '#/components/schemas/AlbumUpdateNotification'
-        dividendNotification:
-          $ref: '#/components/schemas/AlbumDividendNotification'
+        photoStorageSummary:
+          $ref: '#/components/schemas/PhotoStorageSummary'
+        photoStorages:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/PhotoStorage'
     AlbumBasicInfo:
       type: object
       required:
         - albumName
         - createdAt
+        - rootPath
         - plannedDividend
         - createdTags
         - requiredAtAlbumCreation
@@ -688,9 +854,15 @@ components:
           type: string
           format: date-time
           example: '2026-02-13T00:00:00.000Z'
-        plannedDividend:
+        rootPath:
           type: string
-          example: '2026-03-31'
+          example: 家族アルバム
+        plannedDividend:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          example: '2026-03-31T00:00:00.000Z'
         createdTags:
           type: array
           items:
@@ -702,32 +874,180 @@ components:
         requiredAtAlbumCreation:
           type: boolean
           example: true
-    AlbumUpdateNotification:
+    PhotoStorageSummary:
       type: object
+      required:
+        - totalStorages
+        - totalPhotos
+        - totalSizeBytes
+        - lastAddedAt
       properties:
-        addedFolderHistory:
+        totalStorages:
+          type: integer
+          minimum: 0
+          example: 2
+        totalPhotos:
+          type: integer
+          minimum: 0
+          example: 12
+        totalSizeBytes:
+          type: integer
+          format: int64
+          minimum: 0
+          example: 1099511
+        lastAddedAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          example: '2026-02-18T10:30:00.000Z'
+    PhotoStorage:
+      type: object
+      required:
+        - id
+        - name
+        - storagePath
+        - photoCount
+        - totalSizeBytes
+        - createdAt
+        - photos
+      properties:
+        id:
+          type: string
+          example: ps_123
+        name:
+          type: string
+          example: 2026-02-旅行
+        storagePath:
+          type: string
+          example: 家族アルバム/2026-02-旅行
+        photoCount:
+          type: integer
+          minimum: 1
+          example: 8
+        totalSizeBytes:
+          type: integer
+          format: int64
+          minimum: 1
+          example: 8123456
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-02-18T10:30:00.000Z'
+        photos:
           type: array
+          maxItems: 100
           items:
-            type: object
-            properties:
-              folderName:
-                type: string
-                example: 2026_01_京都旅行
-              addedAt:
-                type: string
-                format: date-time
-                example: '2026-01-15T09:30:00.000Z'
-    AlbumDividendNotification:
+            $ref: '#/components/schemas/PhotoStoragePhoto'
+    PhotoStoragePhoto:
       type: object
+      required:
+        - id
+        - fileName
+        - blobPath
+        - blobUrl
+        - sizeBytes
       properties:
-        recordedAtTransaction:
-          type: boolean
-          example: true
-        dividendDates:
+        id:
+          type: string
+          example: psp_123
+        fileName:
+          type: string
+          example: IMG_0001.JPG
+        blobPath:
+          type: string
+          example: 家族アルバム/2026-02-旅行/1700000000-1-IMG_0001.JPG
+        blobUrl:
+          type: string
+          format: uri
+          example: https://example.public.blob.vercel-storage.com/xxx.jpg
+        contentType:
+          type:
+            - string
+            - 'null'
+          example: image/jpeg
+        sizeBytes:
+          type: integer
+          format: int64
+          minimum: 1
+          example: 2048000
+    CreateAlbumRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+          example: 家族アルバム
+        plannedDividend:
+          type: string
+          format: date-time
+          example: '2026-03-31T00:00:00.000Z'
+        createdTags:
           type: array
+          maxItems: 20
           items:
             type: string
-            example: '2025-12-31'
+            maxLength: 50
+          example:
+            - 家族
+            - 旅行
+        requiredAtAlbumCreation:
+          type: boolean
+          example: false
+    AddPhotoStoragesRequest:
+      type: object
+      required:
+        - name
+        - files
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+          example: 2026-02-旅行
+        files:
+          type: array
+          minItems: 1
+          maxItems: 200
+          items:
+            type: object
+            required:
+              - fileName
+              - blobPath
+              - blobUrl
+              - sizeBytes
+            properties:
+              fileName:
+                type: string
+                example: IMG_0001.JPG
+              blobPath:
+                type: string
+                example: 家族アルバム/2026-02-旅行/1700000000-1-IMG_0001.JPG
+              blobUrl:
+                type: string
+                format: uri
+                example: https://example.public.blob.vercel-storage.com/xxx.jpg
+              contentType:
+                type: string
+                example: image/jpeg
+              sizeBytes:
+                type: integer
+                minimum: 1
+                example: 2048000
+    AddPhotoStoragesResponse:
+      type: object
+      required:
+        - albumId
+        - photoStorage
+      properties:
+        albumId:
+          type: string
+          example: abc123
+        photoStorage:
+          $ref: '#/components/schemas/PhotoStorage'
     AlbumInsightResponse:
       type: object
       required:

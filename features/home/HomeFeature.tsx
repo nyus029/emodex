@@ -1,10 +1,16 @@
 'use client';
 
 import { FormEvent, useState } from 'react';
+import { upload } from '@vercel/blob/client';
+import AlbumCreateForm from '@/components/albums/AlbumCreateForm';
+import AlbumDetailPanel from '@/components/albums/AlbumDetailPanel';
+import PhotoStorageBulkForm from '@/components/albums/PhotoStorageBulkForm';
 import ChatForm from '@/components/chat/ChatForm';
 import ChatResponse from '@/components/chat/ChatResponse';
 import NotificationTest from '@/components/notification/NotificationTest';
 import AuthTestSetComponent from '@/components/auth/AuthTestSetComponent';
+import type { AlbumResponse } from '@/lib/albums';
+import { toPathSegment } from '@/lib/path';
 
 const isPwaStandalone = () => {
   if (typeof window === 'undefined') return false;
@@ -24,6 +30,17 @@ export default function HomeFeature() {
   const [isLoading, setIsLoading] = useState(false);
   const [notificationMessage, setNotificationMessage] =
     useState('通知テストを送信しました。');
+  const [albumName, setAlbumName] = useState('家族アルバム');
+  const [plannedDividend, setPlannedDividend] = useState('');
+  const [albumTags, setAlbumTags] = useState('家族,旅行');
+  const [requiredAtAlbumCreation, setRequiredAtAlbumCreation] = useState(false);
+  const [photoStorageName, setPhotoStorageName] = useState('initial-photos');
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+  const [selectedAlbumId, setSelectedAlbumId] = useState('');
+  const [album, setAlbum] = useState<AlbumResponse | null>(null);
+  const [albumMessage, setAlbumMessage] = useState('');
+  const [isAlbumCreating, setIsAlbumCreating] = useState(false);
+  const [isPhotoStorageAdding, setIsPhotoStorageAdding] = useState(false);
 
   const requestNotificationPermission = async () => {
     if (typeof window === 'undefined' || !('Notification' in window)) {
@@ -128,6 +145,194 @@ export default function HomeFeature() {
     }
   };
 
+  const fetchAlbum = async (id: string) => {
+    const response = await fetch(`/api/v1/albums/${id}`);
+    const payload = (await response
+      .json()
+      .catch(() => ({}))) as AlbumResponse & {
+      error?: string;
+    };
+
+    if (!response.ok) {
+      throw new Error(payload.error ?? 'アルバムの取得に失敗しました');
+    }
+
+    setAlbum(payload);
+    setSelectedAlbumId(payload.id);
+  };
+
+  const onSubmitCreateAlbum = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    setIsAlbumCreating(true);
+    setAlbumMessage('');
+
+    try {
+      const createdTags = albumTags
+        .split(',')
+        .map((tag) => tag.trim())
+        .filter(Boolean);
+
+      const requestBody: {
+        name: string;
+        plannedDividend?: string;
+        createdTags?: string[];
+        requiredAtAlbumCreation: boolean;
+      } = {
+        name: albumName.trim(),
+        requiredAtAlbumCreation,
+      };
+
+      if (plannedDividend) {
+        requestBody.plannedDividend = new Date(plannedDividend).toISOString();
+      }
+
+      if (createdTags.length > 0) {
+        requestBody.createdTags = createdTags;
+      }
+
+      const response = await fetch('/api/v1/albums', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as
+        | AlbumResponse
+        | { error?: string };
+      if (!response.ok) {
+        throw new Error(
+          'error' in payload
+            ? (payload.error ?? 'アルバム作成に失敗しました')
+            : 'アルバム作成に失敗しました',
+        );
+      }
+
+      setAlbum(payload as AlbumResponse);
+      setSelectedAlbumId((payload as AlbumResponse).id);
+      setAlbumMessage('アルバムを作成しました。');
+    } catch (error) {
+      setAlbumMessage(
+        error instanceof Error ? error.message : '作成に失敗しました',
+      );
+    } finally {
+      setIsAlbumCreating(false);
+    }
+  };
+
+  const onSubmitAddPhotoStorages = async (
+    event: FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+    if (!selectedAlbumId.trim()) {
+      setAlbumMessage('先にアルバムを作成してください。');
+      return;
+    }
+
+    if (!photoStorageName.trim()) {
+      setAlbumMessage('photo_storage 名を入力してください。');
+      return;
+    }
+
+    if (photoFiles.length === 0) {
+      setAlbumMessage('画像ファイルを選択してください。');
+      return;
+    }
+
+    setIsPhotoStorageAdding(true);
+    setAlbumMessage('');
+    const uploadedBlobUrls: string[] = [];
+    let isCleanupDone = false;
+
+    const cleanupUploadedBlobs = async () => {
+      if (isCleanupDone || uploadedBlobUrls.length === 0) {
+        return;
+      }
+
+      isCleanupDone = true;
+      await fetch('/api/blob/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ urls: uploadedBlobUrls }),
+      }).catch(() => undefined);
+    };
+
+    try {
+      if (!album) {
+        throw new Error('アルバム情報を取得できません');
+      }
+
+      const storagePath = `${album.albumBasicInfo.rootPath}/${toPathSegment(photoStorageName)}`;
+      const uploadedFiles = await Promise.all(
+        photoFiles.map(async (file, index) => {
+          const filePath = `${storagePath}/${Date.now()}-${index + 1}-${toPathSegment(file.name)}`;
+          const blob = await upload(filePath, file, {
+            access: 'public',
+            handleUploadUrl: '/api/blob/upload',
+            clientPayload: JSON.stringify({
+              albumId: selectedAlbumId,
+              storagePath,
+            }),
+          });
+          uploadedBlobUrls.push(blob.url);
+
+          return {
+            fileName: file.name,
+            blobPath: blob.pathname,
+            blobUrl: blob.url,
+            contentType: file.type || undefined,
+            sizeBytes: file.size,
+          };
+        }),
+      );
+
+      const response = await fetch(
+        `/api/v1/albums/${selectedAlbumId}/photo-storages`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: photoStorageName.trim(),
+            files: uploadedFiles,
+          }),
+        },
+      );
+
+      const payload = (await response.json().catch(() => ({}))) as
+        | {
+            error?: string;
+          }
+        | {
+            photoStorage: {
+              photoCount: number;
+            };
+          };
+      if (!response.ok) {
+        await cleanupUploadedBlobs();
+        throw new Error(
+          'error' in payload
+            ? (payload.error ?? 'フォト追加に失敗しました')
+            : 'フォト追加に失敗しました',
+        );
+      }
+
+      await fetchAlbum(selectedAlbumId);
+      setPhotoFiles([]);
+      setAlbumMessage(
+        'photoStorage' in payload
+          ? `${payload.photoStorage.photoCount}枚の画像を追加しました。`
+          : '画像を追加しました。',
+      );
+    } catch (error) {
+      await cleanupUploadedBlobs();
+      setAlbumMessage(
+        error instanceof Error ? error.message : 'フォト追加に失敗しました',
+      );
+    } finally {
+      setIsPhotoStorageAdding(false);
+    }
+  };
+
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-6 px-6 py-10">
       <AuthTestSetComponent />
@@ -150,6 +355,40 @@ export default function HomeFeature() {
         onChange={setNotificationMessage}
         onTest={onClickTestNotification}
       />
+
+      <section className="grid gap-4 border-t pt-6">
+        <h2 className="text-2xl font-bold">Albums API Playground</h2>
+        <p className="text-sm text-zinc-600 dark:text-zinc-300">
+          アルバム作成とフォトストレージ一括追加をこの画面から確認できます。
+        </p>
+        <AlbumCreateForm
+          name={albumName}
+          plannedDividend={plannedDividend}
+          tags={albumTags}
+          requiredAtAlbumCreation={requiredAtAlbumCreation}
+          isSubmitting={isAlbumCreating}
+          onNameChange={setAlbumName}
+          onPlannedDividendChange={setPlannedDividend}
+          onTagsChange={setAlbumTags}
+          onRequiredAtAlbumCreationChange={setRequiredAtAlbumCreation}
+          onSubmit={onSubmitCreateAlbum}
+        />
+        <PhotoStorageBulkForm
+          albumId={selectedAlbumId || '未選択'}
+          storageName={photoStorageName}
+          files={photoFiles}
+          isSubmitting={isPhotoStorageAdding}
+          onStorageNameChange={setPhotoStorageName}
+          onFilesChange={setPhotoFiles}
+          onSubmit={onSubmitAddPhotoStorages}
+        />
+        {albumMessage ? (
+          <p className="text-sm text-zinc-700 dark:text-zinc-200">
+            {albumMessage}
+          </p>
+        ) : null}
+        <AlbumDetailPanel album={album} />
+      </section>
     </main>
   );
 }
