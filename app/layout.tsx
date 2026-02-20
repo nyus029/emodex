@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
+import Header from '@/components/header';
 import Footer from '@/components/footer';
 
 export const metadata: Metadata = {
@@ -32,7 +33,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        {children}
+        <Header />
+        <main className="pt-45">{children}</main>
         <Footer />
       </body>
     </html>

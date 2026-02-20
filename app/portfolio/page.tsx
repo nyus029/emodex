@@ -9,7 +9,7 @@ const mockUsers = [
 
 export default function PortfolioPage() {
   return (
-    <div className="min-h-screen bg-background-light p-6">
+    <div className="min-h-screen bg-background-light p-5">
       <div className="max-w-md mx-auto space-y-4">
         {mockUsers.map((user) => (
           <div
