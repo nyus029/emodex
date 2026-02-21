@@ -28,6 +28,7 @@ export default function Header({
   const { user } = useUser();
   const [currentAvatarSrc, setCurrentAvatarSrc] =
     React.useState<string>(avatarSrc);
+  const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false);
 
   React.useEffect(() => {
     setCurrentAvatarSrc(user?.picture ?? avatarSrc);
@@ -39,7 +40,16 @@ export default function Header({
       return;
     }
 
-    window.location.href = user ? '/auth/logout' : '/auth/login';
+    if (user) {
+      setShowLogoutConfirm(true);
+      return;
+    }
+
+    window.location.href = '/auth/login';
+  };
+
+  const handleLogout = () => {
+    window.location.href = '/auth/logout';
   };
 
   return (
@@ -155,6 +165,35 @@ export default function Header({
           </div>
         </div>
       </div>
+
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-card">
+            <p className="text-sm font-medium text-gray-900">
+              ログアウトしますか？
+            </p>
+            <p className="mt-2 text-xs text-gray-600">
+              現在のセッションを終了します。
+            </p>
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="rounded-lg bg-green px-4 py-2 text-sm font-medium text-white"
+              >
+                ログアウトする
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowLogoutConfirm(false)}
+                className="rounded-lg bg-light-gray px-4 py-2 text-sm font-medium text-gray-600"
+              >
+                キャンセル
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
