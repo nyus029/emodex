@@ -1,8 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
-import Header from '@/components/header';
-import Footer from '@/components/footer';
+import LayoutShell from '@/components/layout-shell';
 
 export const metadata: Metadata = {
   applicationName: 'Emodex',
@@ -33,15 +32,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased bg-light-gray">
-        <div className="flex flex-col h-screen overflow-hidden overscroll-none">
-          <div className="shrink-0">
-            <Header />
-          </div>
-          <main className="grow overflow-y-auto">{children}</main>
-          <div className="shrink-0">
-            <Footer />
-          </div>
-        </div>
+        <LayoutShell>{children}</LayoutShell>
       </body>
     </html>
   );
