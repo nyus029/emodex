@@ -49,6 +49,7 @@ export async function GET() {
   const pending: Array<{
     albumId: string;
     albumName: string;
+    albumType: string;
     plannedDividend: string;
     photoStorageId: string;
     photoStorageName: string;
@@ -78,6 +79,7 @@ export async function GET() {
       pending.push({
         albumId: album.id,
         albumName: album.name,
+        albumType: album.albumType,
         plannedDividend: album.plannedDividend.toISOString(),
         photoStorageId: storage.id,
         photoStorageName: storage.name,
@@ -86,6 +88,85 @@ export async function GET() {
         tags: (storage.tags as string[]) ?? [],
       });
     }
+  }
+
+  // Approval requests: pending approval requests where user is a member
+  const dbUser = userEmail
+    ? await prisma.user.findUnique({
+        where: { email: userEmail },
+        select: { id: true },
+      })
+    : null;
+
+  type ApprovalRequestItem = {
+    approvalRequestId: string;
+    albumId: string;
+    albumName: string;
+    photoStorageId: string;
+    photoStorageName: string;
+    photoCount: number;
+    emoValueAtRequest: number;
+    tags: string[];
+    requestedBy: { id: number; name: string };
+    status: string;
+    expiresAt: string;
+    createdAt: string;
+    approvedCount: number;
+    totalCount: number;
+    myApproval: boolean;
+  };
+
+  let approvalRequests: ApprovalRequestItem[] = [];
+
+  if (dbUser) {
+    // Expire stale requests first
+    await prisma.dividendApprovalRequest.updateMany({
+      where: {
+        status: 'PENDING',
+        expiresAt: { lt: now },
+      },
+      data: { status: 'EXPIRED' },
+    });
+
+    const rawRequests = await prisma.dividendApprovalRequest.findMany({
+      where: {
+        status: 'PENDING',
+        approvals: { some: { userId: dbUser.id } },
+      },
+      include: {
+        album: { select: { id: true, name: true } },
+        photoStorage: {
+          select: { id: true, name: true, photoCount: true, tags: true },
+        },
+        requestedByUser: { select: { id: true, name: true } },
+        approvals: {
+          select: { userId: true, isApproved: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    approvalRequests = rawRequests.map((r) => ({
+      approvalRequestId: r.id,
+      albumId: r.album.id,
+      albumName: r.album.name,
+      photoStorageId: r.photoStorage.id,
+      photoStorageName: r.photoStorage.name,
+      photoCount: r.photoStorage.photoCount,
+      emoValueAtRequest: roundEmo(r.emoValueAtRequest),
+      tags: (r.photoStorage.tags as string[]) ?? [],
+      requestedBy: {
+        id: r.requestedByUser.id,
+        name: r.requestedByUser.name,
+      },
+      status: r.status,
+      expiresAt: r.expiresAt.toISOString(),
+      createdAt: r.createdAt.toISOString(),
+      approvedCount: r.approvals.filter((a) => a.isApproved).length,
+      totalCount: r.approvals.length,
+      myApproval:
+        r.approvals.find((a) => a.userId === dbUser.id)?.isApproved ?? false,
+    }));
   }
 
   // Completed: all accessible albums (regardless of plannedDividend)
@@ -127,5 +208,5 @@ export async function GET() {
     executedAt: e.executedAt.toISOString(),
   }));
 
-  return jsonSuccess({ pending, completed });
+  return jsonSuccess({ pending, approvalRequests, completed });
 }

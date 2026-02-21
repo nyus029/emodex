@@ -830,7 +830,7 @@ paths:
       tags:
         - Dividend
       summary: List pending and completed dividends
-      description: Returns pending (actionable) and completed dividend items for all accessible albums, grouped by photo storage.
+      description: Returns pending (actionable) dividend items, approval requests awaiting member consent, and completed dividend items for all accessible albums.
       responses:
         '200':
           description: Dividend list
@@ -872,6 +872,87 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Dividend event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/dividend/approvals/{requestId}:
+    get:
+      tags:
+        - Dividend
+      summary: Get dividend approval request detail
+      description: Returns the detail of a dividend approval request including all member approvals and status.
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          description: Dividend approval request identifier
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Approval request detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DividendApprovalRequestDetail'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Approval request not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - Dividend
+      summary: Approve a dividend approval request
+      description: Approves a pending dividend request for the current user. When all group members approve, the dividend is automatically executed.
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          description: Dividend approval request identifier
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Approval recorded (or dividend executed if all approved)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DividendApprovalResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Not a member of this approval
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Approval request not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Already approved or request not pending
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '410':
+          description: Approval request has expired
           content:
             application/json:
               schema:
@@ -1656,8 +1737,6 @@ components:
       type: object
       required:
         - action
-        - processedStorages
-        - events
       properties:
         action:
           type: string
@@ -1666,9 +1745,11 @@ components:
             - RECEIVE
         processedStorages:
           type: integer
+          description: Number of storages processed (present for immediate execution)
           example: 2
         events:
           type: array
+          description: Dividend events created (present for immediate execution)
           items:
             type: object
             required:
@@ -1697,6 +1778,53 @@ components:
               newBaseEmo:
                 type: integer
                 example: 200
+        approvalRequired:
+          type: boolean
+          description: True when the RECEIVE action requires group approval (SHARED albums only)
+          example: true
+        approvalRequests:
+          type: array
+          description: Created approval requests (present when approvalRequired=true)
+          items:
+            type: object
+            required:
+              - id
+              - photoStorageName
+              - emoValueAtRequest
+              - expiresAt
+              - approvals
+            properties:
+              id:
+                type: string
+                example: dar_123
+              photoStorageName:
+                type: string
+                example: 2026-02-旅行
+              emoValueAtRequest:
+                type: number
+                example: 1500.5
+              expiresAt:
+                type: string
+                format: date-time
+                example: '2026-02-28T00:00:00.000Z'
+              approvals:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - userId
+                    - userName
+                    - isApproved
+                  properties:
+                    userId:
+                      type: integer
+                      example: 10
+                    userName:
+                      type: string
+                      example: Taro
+                    isApproved:
+                      type: boolean
+                      example: true
     ChartDataResponse:
       type: object
       required:
@@ -1867,12 +1995,18 @@ components:
       type: object
       required:
         - pending
+        - approvalRequests
         - completed
       properties:
         pending:
           type: array
           items:
             $ref: '#/components/schemas/PendingDividendItem'
+        approvalRequests:
+          type: array
+          description: Pending approval requests where the user is a group member
+          items:
+            $ref: '#/components/schemas/ApprovalRequestListItem'
         completed:
           type: array
           items:
@@ -1882,6 +2016,7 @@ components:
       required:
         - albumId
         - albumName
+        - albumType
         - plannedDividend
         - photoStorageId
         - photoStorageName
@@ -1895,6 +2030,8 @@ components:
         albumName:
           type: string
           example: 家族アルバム
+        albumType:
+          $ref: '#/components/schemas/AlbumType'
         plannedDividend:
           type: string
           format: date-time
@@ -2073,3 +2210,259 @@ components:
                       - string
                       - 'null'
                     example: image/jpeg
+    ApprovalStatus:
+      type: string
+      enum:
+        - PENDING
+        - APPROVED
+        - EXPIRED
+    ApprovalRequestListItem:
+      type: object
+      required:
+        - approvalRequestId
+        - albumId
+        - albumName
+        - photoStorageId
+        - photoStorageName
+        - photoCount
+        - emoValueAtRequest
+        - tags
+        - requestedBy
+        - status
+        - expiresAt
+        - createdAt
+        - approvedCount
+        - totalCount
+        - myApproval
+      properties:
+        approvalRequestId:
+          type: string
+          example: dar_123
+        albumId:
+          type: string
+          example: abc123
+        albumName:
+          type: string
+          example: 家族アルバム
+        photoStorageId:
+          type: string
+          example: ps_123
+        photoStorageName:
+          type: string
+          example: 2026-02-旅行
+        photoCount:
+          type: integer
+          example: 8
+        emoValueAtRequest:
+          type: number
+          example: 1500.5
+        tags:
+          type: array
+          items:
+            type: string
+          example:
+            - 旅行
+            - 家族
+        requestedBy:
+          type: object
+          required:
+            - id
+            - name
+          properties:
+            id:
+              type: integer
+              example: 10
+            name:
+              type: string
+              example: Taro
+        status:
+          $ref: '#/components/schemas/ApprovalStatus'
+        expiresAt:
+          type: string
+          format: date-time
+          example: '2026-02-28T00:00:00.000Z'
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-02-21T12:00:00.000Z'
+        approvedCount:
+          type: integer
+          example: 1
+        totalCount:
+          type: integer
+          example: 3
+        myApproval:
+          type: boolean
+          description: Whether the current user has approved
+          example: false
+    DividendApprovalRequestDetail:
+      type: object
+      required:
+        - id
+        - status
+        - album
+        - photoStorage
+        - requestedBy
+        - emoValueAtRequest
+        - expiresAt
+        - completedAt
+        - createdAt
+        - approvedCount
+        - totalCount
+        - approvals
+        - dividendEvent
+      properties:
+        id:
+          type: string
+          example: dar_123
+        status:
+          $ref: '#/components/schemas/ApprovalStatus'
+        album:
+          type: object
+          required:
+            - id
+            - name
+          properties:
+            id:
+              type: string
+              example: abc123
+            name:
+              type: string
+              example: 家族アルバム
+        photoStorage:
+          type: object
+          required:
+            - id
+            - name
+            - photoCount
+            - tags
+          properties:
+            id:
+              type: string
+              example: ps_123
+            name:
+              type: string
+              example: 2026-02-旅行
+            photoCount:
+              type: integer
+              example: 8
+            tags:
+              type: array
+              items:
+                type: string
+              example:
+                - 旅行
+                - 家族
+        requestedBy:
+          type: object
+          required:
+            - id
+            - name
+          properties:
+            id:
+              type: integer
+              example: 10
+            name:
+              type: string
+              example: Taro
+        emoValueAtRequest:
+          type: number
+          example: 1500.5
+        expiresAt:
+          type: string
+          format: date-time
+          example: '2026-02-28T00:00:00.000Z'
+        completedAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          example: null
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-02-21T12:00:00.000Z'
+        approvedCount:
+          type: integer
+          example: 2
+        totalCount:
+          type: integer
+          example: 3
+        approvals:
+          type: array
+          items:
+            type: object
+            required:
+              - userId
+              - userName
+              - isApproved
+              - approvedAt
+            properties:
+              userId:
+                type: integer
+                example: 10
+              userName:
+                type: string
+                example: Taro
+              isApproved:
+                type: boolean
+                example: true
+              approvedAt:
+                type:
+                  - string
+                  - 'null'
+                format: date-time
+                example: '2026-02-21T12:00:00.000Z'
+        dividendEvent:
+          type:
+            - object
+            - 'null'
+          description: The resulting dividend event when all members approved. Null while pending.
+          required:
+            - id
+            - emoValueAtEvent
+            - executedAt
+          properties:
+            id:
+              type: string
+              example: evt_123
+            emoValueAtEvent:
+              type: number
+              example: 1500.5
+            executedAt:
+              type: string
+              format: date-time
+              example: '2026-02-21T15:00:00.000Z'
+    DividendApprovalResponse:
+      type: object
+      required:
+        - status
+        - executed
+      properties:
+        status:
+          $ref: '#/components/schemas/ApprovalStatus'
+        executed:
+          type: boolean
+          description: Whether the dividend was executed (all members approved)
+          example: false
+        approvedCount:
+          type: integer
+          description: Number of members who have approved (present when not yet executed)
+          example: 2
+        totalCount:
+          type: integer
+          description: Total number of members required (present when not yet executed)
+          example: 3
+        dividendEvent:
+          type: object
+          description: The dividend event details (present only when executed=true)
+          properties:
+            id:
+              type: string
+              example: evt_123
+            photoStorageName:
+              type: string
+              example: 2026-02-旅行
+            emoValueAtEvent:
+              type: number
+              example: 1500.5
