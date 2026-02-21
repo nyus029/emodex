@@ -1,6 +1,7 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
+import { flushSync } from 'react-dom';
 import Link from 'next/link';
 import { upload } from '@vercel/blob/client';
 import AlbumCreateForm from '@/components/albums/AlbumCreateForm';
@@ -8,6 +9,7 @@ import AlbumDetailPanel from '@/components/albums/AlbumDetailPanel';
 import PhotoStorageBulkForm from '@/components/albums/PhotoStorageBulkForm';
 import ChatForm from '@/components/chat/ChatForm';
 import ChatResponse from '@/components/chat/ChatResponse';
+import SentenceGenerateForm from '@/components/sentences/SentenceGenerateForm';
 import NotificationTest from '@/components/notification/NotificationTest';
 import AuthTestSetComponent from '@/components/auth/AuthTestSetComponent';
 import type { AlbumResponse } from '@/lib/albums';
@@ -42,6 +44,77 @@ export default function HomeFeature() {
   const [albumMessage, setAlbumMessage] = useState('');
   const [isAlbumCreating, setIsAlbumCreating] = useState(false);
   const [isPhotoStorageAdding, setIsPhotoStorageAdding] = useState(false);
+
+  const [selectedWords, setSelectedWords] = useState<string[]>([]);
+  const [generatedSentence, setGeneratedSentence] = useState('');
+  const [isSentenceGenerating, setIsSentenceGenerating] = useState(false);
+  const SENTENCE_STORAGE_KEY = 'sentence-from-words-output';
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const saved = localStorage.getItem(SENTENCE_STORAGE_KEY);
+      if (saved) setGeneratedSentence(saved);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const handleToggleWord = (word: string) => {
+    setSelectedWords((prev) =>
+      prev.includes(word) ? prev.filter((w) => w !== word) : [...prev, word],
+    );
+  };
+
+  const handleAddWord = (word: string) => {
+    setSelectedWords((prev) => (prev.includes(word) ? prev : [...prev, word]));
+  };
+
+  const handleGenerateSentence = async () => {
+    if (selectedWords.length === 0) return;
+    setIsSentenceGenerating(true);
+    try {
+      const res = await fetch('/api/v1/sentences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ words: selectedWords }),
+      });
+      const raw = await res.json().catch(() => ({}));
+      const data = raw as
+        | { sentence: string }
+        | { error?: string; details?: string };
+
+      if (res.ok && 'sentence' in data && typeof data.sentence === 'string') {
+        const sentence = data.sentence.trim();
+        console.log('生成された文章:', sentence);
+        if (sentence) {
+          flushSync(() => setGeneratedSentence(sentence));
+          try {
+            localStorage.setItem(SENTENCE_STORAGE_KEY, sentence);
+          } catch {
+            // ignore
+          }
+        } else {
+          console.warn('API returned empty sentence');
+        }
+      } else {
+        const errorMsg =
+          (data && 'error' in data && typeof data.error === 'string'
+            ? data.error
+            : null) ||
+          (data && 'details' in data && typeof data.details === 'string'
+            ? data.details
+            : null) ||
+          `HTTP ${res.status}`;
+        console.error('Sentence generation error:', res.status, data);
+        flushSync(() => setGeneratedSentence(`エラー: ${errorMsg}`));
+      }
+    } catch (err) {
+      console.error('Sentence generation request failed:', err);
+    } finally {
+      setIsSentenceGenerating(false);
+    }
+  };
 
   const requestNotificationPermission = async () => {
     if (typeof window === 'undefined' || !('Notification' in window)) {
@@ -370,6 +443,25 @@ export default function HomeFeature() {
         onChange={setNotificationMessage}
         onTest={onClickTestNotification}
       />
+
+      <section className="grid gap-4 border-t pt-6">
+        <h2 className="text-2xl font-bold">単語から文章</h2>
+        <p className="text-sm text-zinc-600 dark:text-zinc-300">
+          感情ワードを選ぶか単語を追加して、文章を生成します。
+        </p>
+        <SentenceGenerateForm
+          selectedWords={selectedWords}
+          onToggleWord={handleToggleWord}
+          onAddWord={handleAddWord}
+          onGenerate={handleGenerateSentence}
+          isGenerating={isSentenceGenerating}
+        />
+        <ChatResponse
+          key="sentence-response"
+          title="作成された文章"
+          output={generatedSentence || '（ここに生成された文章が表示されます）'}
+        />
+      </section>
 
       <section className="grid gap-4 border-t pt-6">
         <h2 className="text-2xl font-bold">Albums API Playground</h2>
