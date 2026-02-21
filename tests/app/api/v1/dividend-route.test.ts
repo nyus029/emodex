@@ -200,10 +200,13 @@ const fakePrisma = {
       const where = args.where as {
         photoStorageId: string;
         executedAt?: { gte: Date };
+        action?: string;
       };
       return (
         dividendEvents.find((e) => {
           if (e.photoStorageId !== where.photoStorageId) return false;
+          if (where.action !== undefined && e.action !== where.action)
+            return false;
           if (where.executedAt?.gte && e.executedAt < where.executedAt.gte)
             return false;
           return true;
@@ -311,7 +314,7 @@ describe('dividend routes', () => {
       expect(payload.events[0]?.photoStorageId).toBe('ps-1');
     });
 
-    it('returns 409 when dividend already executed for the storage', async () => {
+    it('returns 409 when storage already has RECEIVE event', async () => {
       const { postDividend } = await routesPromise;
       const album = createAlbum({ id: 'album-2' });
       createStorage(album, { id: 'ps-3' });
@@ -320,16 +323,16 @@ describe('dividend routes', () => {
         id: 'evt-existing',
         albumId: 'album-2',
         photoStorageId: 'ps-3',
-        action: 'REINVEST',
+        action: 'RECEIVE',
         emoValueAtEvent: 500,
         previousBaseEmo: 100,
-        newBaseEmo: 200,
+        newBaseEmo: 0,
         executedAt: new Date(),
       });
 
       const response = await postDividend(
         createJsonRequest('/api/v1/albums/album-2/dividend', {
-          action: 'REINVEST',
+          action: 'RECEIVE',
           photoStorageId: 'ps-3',
         }),
         { params: Promise.resolve({ id: 'album-2' }) },
@@ -338,6 +341,63 @@ describe('dividend routes', () => {
 
       expect(response.status).toBe(409);
       expect(payload.error).toBe('Dividend already executed for this storage');
+    });
+
+    it('allows RECEIVE when plannedDividend is null (single storage)', async () => {
+      const { postDividend } = await routesPromise;
+      const album = createAlbum({
+        id: 'album-null-date',
+        plannedDividend: null,
+      });
+      createStorage(album, { id: 'ps-null' });
+
+      const response = await postDividend(
+        createJsonRequest('/api/v1/albums/album-null-date/dividend', {
+          action: 'RECEIVE',
+          photoStorageId: 'ps-null',
+        }),
+        { params: Promise.resolve({ id: 'album-null-date' }) },
+      );
+      const payload = (await response.json()) as {
+        action: string;
+        processedStorages: number;
+        events: Array<{ id: string; photoStorageId: string }>;
+      };
+
+      expect(response.status).toBe(200);
+      expect(payload.action).toBe('RECEIVE');
+      expect(payload.processedStorages).toBe(1);
+      expect(payload.events[0]?.photoStorageId).toBe('ps-null');
+    });
+
+    it('allows RECEIVE without photoStorageId when plannedDividend is null', async () => {
+      const { postDividend } = await routesPromise;
+      const album = createAlbum({
+        id: 'album-bulk-null',
+        plannedDividend: null,
+      });
+      createStorage(album, { id: 'ps-bulk-1' });
+      createStorage(album, { id: 'ps-bulk-2' });
+
+      const response = await postDividend(
+        createJsonRequest('/api/v1/albums/album-bulk-null/dividend', {
+          action: 'RECEIVE',
+        }),
+        { params: Promise.resolve({ id: 'album-bulk-null' }) },
+      );
+      const payload = (await response.json()) as {
+        action: string;
+        processedStorages: number;
+        events: Array<{ photoStorageId: string }>;
+      };
+
+      expect(response.status).toBe(200);
+      expect(payload.action).toBe('RECEIVE');
+      expect(payload.processedStorages).toBe(2);
+      expect(payload.events.map((e) => e.photoStorageId).sort()).toEqual([
+        'ps-bulk-1',
+        'ps-bulk-2',
+      ]);
     });
 
     it('returns 404 when photoStorageId does not exist', async () => {
