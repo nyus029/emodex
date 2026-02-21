@@ -113,14 +113,16 @@ export default function ApprovalRequestItem({
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={thumbnailUrl}
-            alt="thumbnail"
+            alt={albumName}
+            width="64"
+            height="64"
             className="h-16 w-16 shrink-0 rounded-xl object-cover"
             loading="lazy"
           />
         ) : (
           <Image
             src="/mockphoto.png"
-            alt="thumbnail"
+            alt={albumName}
             width={64}
             height={64}
             className="h-16 w-16 shrink-0 rounded-xl object-cover"
