@@ -1,10 +1,11 @@
-import React from 'react';
 import { auth0 } from '@/lib/auth0';
 import { prisma } from '@/lib/prisma';
+import PortfolioClient from './PortfolioClient';
 
 type PortfolioItem = {
   id: number;
   name: string;
+  adminUserId: number;
 };
 
 export default async function PortfolioPage() {
@@ -12,6 +13,7 @@ export default async function PortfolioPage() {
   const email = session?.user?.email as string | undefined;
 
   let groups: PortfolioItem[] = [];
+  let userId: number | null = null;
   if (email) {
     const dbUser = await prisma.user.findUnique({
       where: { email },
@@ -19,6 +21,7 @@ export default async function PortfolioPage() {
     });
 
     if (dbUser) {
+      userId = dbUser.id;
       const memberships = await prisma.membership.findMany({
         where: { userId: dbUser.id },
         include: { group: true },
@@ -27,39 +30,16 @@ export default async function PortfolioPage() {
       groups = memberships.map((membership) => ({
         id: membership.groupId,
         name: membership.group.groupName,
+        adminUserId: membership.group.adminUserId,
       }));
     }
   }
 
   return (
-    <div className="bg-background-light p-5">
-      <div className="max-w-md mx-auto space-y-4">
-        {!email ? (
-          <div className="rounded-xl bg-white p-4 text-sm text-gray-700 shadow-card">
-            ログイン後にグループ一覧を表示できます。
-          </div>
-        ) : groups.length === 0 ? (
-          <div className="rounded-xl bg-white p-4 text-sm text-gray-700 shadow-card">
-            表示できるグループがありません。
-          </div>
-        ) : (
-          groups.map((group) => (
-            <div
-              key={group.id}
-              className="flex items-center gap-2 bg-white rounded-xl shadow-card p-4"
-            >
-              {/* ユーザーアイコン（削除可能） */}
-              <div className="w-8 h-8 flex items-center justify-center rounded-full bg-light-gray">
-                <svg className="w-4 h-4" viewBox="0 0 24 24">
-                  {/* User Icon */}
-                </svg>
-              </div>
-
-              <div className="text-gray-800 font-medium">{group.name}</div>
-            </div>
-          ))
-        )}
-      </div>
-    </div>
+    <PortfolioClient
+      initialGroups={groups}
+      userId={userId}
+      isLoggedIn={Boolean(email)}
+    />
   );
 }
