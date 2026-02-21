@@ -24,7 +24,7 @@ export async function GET(
   }
 
   const photoStorages = await prisma.photoStorage.findMany({
-    where: { albumId: id },
+    where: { albumId: id, isCompoundActive: true },
     orderBy: { createdAt: 'asc' },
     select: {
       id: true,

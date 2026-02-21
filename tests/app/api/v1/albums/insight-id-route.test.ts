@@ -100,7 +100,7 @@ describe('GET /api/v1/albums/insight/[id]', () => {
     });
   });
 
-  it('calls photoStorage.findMany with albumId and orderBy createdAt asc', async () => {
+  it('calls photoStorage.findMany with albumId, isCompoundActive and orderBy createdAt asc', async () => {
     await GET(new Request('http://localhost'), {
       params: Promise.resolve({ id: albumId }),
     });
@@ -108,7 +108,7 @@ describe('GET /api/v1/albums/insight/[id]', () => {
     expect(mockPhotoStorageFindMany).toHaveBeenCalledTimes(1);
     const [args] = mockPhotoStorageFindMany.mock.calls;
     expect(args[0]).toMatchObject({
-      where: { albumId },
+      where: { albumId, isCompoundActive: true },
       orderBy: { createdAt: 'asc' },
       select: {
         id: true,

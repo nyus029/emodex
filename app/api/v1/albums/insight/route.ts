@@ -73,18 +73,20 @@ export async function GET() {
   const totalEmoValue = roundEmo(calculateAlbumEmo(allStorages));
   const totalDayOverDayChange = calculateDayOverDayChange(allStorages);
 
-  const albums = allAlbums.map((album) => {
-    const storages: StorageParams[] = album.photoStorages;
-
-    return {
-      id: album.id,
-      name: album.name,
-      albumType: album.albumType,
-      groupName: album.group?.groupName ?? null,
-      emoValue: roundEmo(calculateAlbumEmo(storages)),
-      dayOverDayChange: calculateDayOverDayChange(storages),
-    };
-  });
+  const albums = allAlbums
+    .map((album) => {
+      const storages: StorageParams[] = album.photoStorages;
+      const emoValue = roundEmo(calculateAlbumEmo(storages));
+      return {
+        id: album.id,
+        name: album.name,
+        albumType: album.albumType,
+        groupName: album.group?.groupName ?? null,
+        emoValue,
+        dayOverDayChange: calculateDayOverDayChange(storages),
+      };
+    })
+    .filter((a) => a.emoValue > 0);
 
   return jsonSuccess({ totalEmoValue, totalDayOverDayChange, albums });
 }
