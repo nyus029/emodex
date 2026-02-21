@@ -30,10 +30,6 @@ export async function POST(
     return jsonError('Album not found', 404);
   }
 
-  if (!album.plannedDividend || album.plannedDividend > new Date()) {
-    return jsonError('Dividend date has not been reached yet', 400);
-  }
-
   const rawBody = (await request.json().catch(() => null)) as unknown;
   const parsed = parseBody(rawBody, dividendSchema);
   if (parsed.error) return parsed.error;
@@ -53,7 +49,7 @@ export async function POST(
     const existingEvent = await prisma.dividendEvent.findFirst({
       where: {
         photoStorageId,
-        executedAt: { gte: album.plannedDividend! },
+        action: 'RECEIVE',
       },
     });
     if (existingEvent) {

@@ -1009,6 +1009,70 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/mood/sentence:
+    post:
+      tags:
+        - Mood
+      summary: Generate and save mood sentence from words
+      description: |
+        Requires Auth0 session. Generates a sentence that expresses the user's mood/mental state from the given words, optionally generates a "therefore you need to feel ~" recommendation, and saves the record linked to the user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MoodSentenceRequest'
+      responses:
+        '200':
+          description: Mood sentence saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MoodSentenceResponse'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server or LLM error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/mood/suggested-albums:
+    get:
+      tags:
+        - Mood
+      summary: Get albums suggested by current mood
+      description: |
+        Requires Auth0 session. Returns albums that match the user's latest saved mood sentence, so the user knows which albums to view.
+      responses:
+        '200':
+          description: Suggested albums for the mood
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuggestedAlbumsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: No mood record found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
   schemas:
     HealthResponse:
@@ -1474,6 +1538,7 @@ components:
       required:
         - albumBasicInfo
         - emoValueInfo
+        - photoStorages
       properties:
         albumBasicInfo:
           type: object
@@ -1506,6 +1571,32 @@ components:
               example: 8500
             dayOverDayChange:
               $ref: '#/components/schemas/EmoValueChange'
+        photoStorages:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/AlbumInsightPhotoStorage'
+    AlbumInsightPhotoStorage:
+      type: object
+      required:
+        - id
+        - name
+        - storagePath
+        - photoCount
+      properties:
+        id:
+          type: string
+          example: ps_123
+        name:
+          type: string
+          example: 2026-02-旅行
+        storagePath:
+          type: string
+          example: 家族アルバム/2026-02-旅行
+        photoCount:
+          type: integer
+          minimum: 0
+          example: 8
     EmoValueChange:
       type: object
       required:
@@ -1604,6 +1695,67 @@ components:
         value:
           type: number
           example: 8500
+    MoodSentenceRequest:
+      type: object
+      required:
+        - words
+      properties:
+        words:
+          type: array
+          minItems: 1
+          items:
+            type: string
+          description: 心象に含めたい単語の配列
+        includeRecommendation:
+          type: boolean
+          default: false
+          description: When true, also generate "therefore you need to feel ~" text.
+    MoodSentenceResponse:
+      type: object
+      required:
+        - sentence
+        - recordId
+      properties:
+        sentence:
+          type: string
+          description: 生成された心象を表す文章
+        recommendationText:
+          type: string
+          description: Optional one-sentence encouragement based on mood (when includeRecommendation was true).
+        recordId:
+          type: string
+          description: Created MoodRecord id
+    SuggestedAlbumsResponse:
+      type: object
+      required:
+        - suggestedAlbums
+        - emotionSentence
+      properties:
+        suggestedAlbums:
+          type: array
+          items:
+            $ref: '#/components/schemas/SuggestedAlbumItem'
+        emotionSentence:
+          type: string
+          description: The mood sentence used for suggestion
+        message:
+          type: string
+          description: Optional message (e.g. when no albums)
+    SuggestedAlbumItem:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          example: abc123
+        name:
+          type: string
+          example: 家族アルバム
+        reason:
+          type: string
+          description: Short reason why this album fits the mood
     SentenceRequest:
       type: object
       required:

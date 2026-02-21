@@ -420,8 +420,8 @@ export default function PortfolioClient({
 
   return (
     <div className="min-h-screen bg-background-light p-5">
-      <div className="mx-auto flex h-[calc(100svh-40px)] max-w-md flex-col overflow-hidden">
-        <div className="shrink-0 border-b border-gray-300 pb-3 pt-1">
+      <div className="mx-auto max-w-md space-y-4 pb-24">
+        <div className="rounded-xl bg-white px-4 py-3 shadow-card">
           <div className="flex items-center justify-between">
             <p className="text-lg font-semibold text-black">Groups</p>
             <button
@@ -435,44 +435,55 @@ export default function PortfolioClient({
           </div>
         </div>
 
-        <div className="mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
-          {!isLoggedIn ? (
-            <div className="rounded-xl bg-white p-4 text-sm text-gray-700 shadow-card">
-              ログイン後にグループ一覧を表示できます。
-            </div>
-          ) : groups.length === 0 ? (
-            <div className="rounded-xl bg-white p-4 text-sm text-gray-700 shadow-card">
-              表示できるグループがありません。
-            </div>
-          ) : (
-            groups.map((group) => (
-              <div
-                key={group.id}
-                className="flex items-center gap-2 rounded-xl bg-white p-4 shadow-card"
-              >
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-light-gray">
-                  <Image
-                    src="/avatar.svg"
-                    alt="avatar"
-                    width={16}
-                    height={16}
-                    className="h-4 w-4"
-                  />
+        {!isLoggedIn ? (
+          <div className="rounded-xl bg-white p-4 text-sm text-gray-700 shadow-card">
+            ログイン後にグループ一覧を表示できます。
+          </div>
+        ) : groups.length === 0 ? (
+          <div className="rounded-xl bg-white p-4 text-sm text-gray-700 shadow-card">
+            表示できるグループがありません。
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {groups.map((group) =>
+              group.adminUserId === userId ? (
+                <button
+                  key={group.id}
+                  type="button"
+                  onClick={() => openEditModal(group)}
+                  className="flex w-full items-center gap-2 rounded-xl bg-white p-4 text-left shadow-card transition-colors hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600"
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-light-gray">
+                    <Image
+                      src="/avatar.svg"
+                      alt="avatar"
+                      width={16}
+                      height={16}
+                      className="h-4 w-4"
+                    />
+                  </div>
+                  <div className="font-medium text-gray-800">{group.name}</div>
+                </button>
+              ) : (
+                <div
+                  key={group.id}
+                  className="flex items-center gap-2 rounded-xl bg-white p-4 shadow-card"
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-light-gray">
+                    <Image
+                      src="/avatar.svg"
+                      alt="avatar"
+                      width={16}
+                      height={16}
+                      className="h-4 w-4"
+                    />
+                  </div>
+                  <div className="font-medium text-gray-800">{group.name}</div>
                 </div>
-                <div className="font-medium text-gray-800">{group.name}</div>
-                {group.adminUserId === userId ? (
-                  <button
-                    type="button"
-                    onClick={() => openEditModal(group)}
-                    className="ml-auto rounded-md border border-gray-300 px-2 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50"
-                  >
-                    編集
-                  </button>
-                ) : null}
-              </div>
-            ))
-          )}
-        </div>
+              ),
+            )}
+          </div>
+        )}
       </div>
 
       {isModalOpen ? (

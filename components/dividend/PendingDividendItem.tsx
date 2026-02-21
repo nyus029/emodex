@@ -76,19 +76,21 @@ export default function PendingDividendItem({
         {error && <p className="text-xs text-red-600">{error}</p>}
         <div className="flex gap-2">
           <button
+            type="button"
             onClick={() => handleAction(confirming)}
             disabled={submitting}
-            className="rounded-lg bg-black px-4 py-2 text-sm text-white disabled:opacity-50"
+            className="h-[38px] rounded-lg bg-green px-4 text-sm font-semibold text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitting ? '処理中...' : '実行する'}
           </button>
           <button
+            type="button"
             onClick={() => {
               setConfirming(null);
               setError(null);
             }}
             disabled={submitting}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 disabled:opacity-50"
+            className="h-[38px] rounded-lg border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             キャンセル
           </button>
@@ -146,14 +148,16 @@ export default function PendingDividendItem({
       </div>
       <div className="flex gap-2 pt-1">
         <button
+          type="button"
           onClick={() => setConfirming('REINVEST')}
-          className="rounded-lg bg-black px-4 py-2 text-sm text-white"
+          className="h-[40px] flex-1 rounded-lg bg-green px-4 text-sm font-semibold text-white transition-colors hover:bg-green-700"
         >
           再投資する
         </button>
         <button
+          type="button"
           onClick={() => setConfirming('RECEIVE')}
-          className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700"
+          className="h-[40px] flex-1 rounded-lg border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
         >
           受け取る
         </button>

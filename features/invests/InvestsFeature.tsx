@@ -247,8 +247,8 @@ export default function InvestsFeature() {
         <div className="mx-auto max-w-md space-y-4 pb-24">
           {/* ページヘッダーカード */}
           <div className="rounded-xl bg-white px-5 py-4 shadow-card">
-            <h1 className="text-[15px] font-medium text-gray-900">
-              フォトストレージ積み立て
+            <h1 className="text-[15px] font-semibold text-gray-900">
+              積み立て
             </h1>
             <p className="mt-1 text-[13px] text-gray-500">
               エモタイプとアルバムを選んで写真をアップロードします。

@@ -1,18 +1,7 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { mastra } from '@/mastra';
-
-const PROMPT_TEMPLATE = (wordList: string[]) =>
-  `以下の単語を全て含む、意味の通った日本語の文章を1文だけ作成してください。
-単語: ${wordList.join(', ')}
-
-要件:
-- すべての単語を含めてください
-- 自然で意味のある文章にしてください
-- 1文だけ生成してください
-- 句点で終わってください
-
-文章のみを出力してください。`;
+import { SENTENCE_FROM_WORDS_PROMPT } from '@/mastra/prompts/mood-prompts';
 
 const NO_KEY_MESSAGE =
   'OPENAI_API_KEYを設定すると、Codexモデルで選択した単語から生成された文章がここに表示されます。';
@@ -60,7 +49,7 @@ export const sentenceFromWordsTool = createTool({
 
     try {
       const stream = await agent.stream([
-        { role: 'user', content: PROMPT_TEMPLATE(safeWords) },
+        { role: 'user', content: SENTENCE_FROM_WORDS_PROMPT(safeWords) },
       ]);
       const raw = await stream.text;
       if (stream.error) {
