@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { flushSync } from 'react-dom';
 import Link from 'next/link';
+import { useUser } from '@auth0/nextjs-auth0/client';
 import { upload } from '@vercel/blob/client';
 import AlbumCreateForm from '@/components/albums/AlbumCreateForm';
 import AlbumDetailPanel from '@/components/albums/AlbumDetailPanel';
@@ -14,6 +15,12 @@ import NotificationTest from '@/components/notification/NotificationTest';
 import type { AlbumResponse } from '@/lib/albums';
 import { toPathSegment } from '@/lib/path';
 import { useAgentComment } from '@/lib/agent-comment-context';
+
+type SuggestedAlbumItem = {
+  id: string;
+  name: string;
+  reason?: string;
+};
 
 const isPwaStandalone = () => {
   if (typeof window === 'undefined') return false;
@@ -48,7 +55,15 @@ export default function HomeFeature() {
   const [selectedWords, setSelectedWords] = useState<string[]>([]);
   const [generatedSentence, setGeneratedSentence] = useState('');
   const [isSentenceGenerating, setIsSentenceGenerating] = useState(false);
+  const [moodRecommendationText, setMoodRecommendationText] = useState('');
+  const [isSavingMood, setIsSavingMood] = useState(false);
+  const [suggestedAlbums, setSuggestedAlbums] = useState<SuggestedAlbumItem[]>(
+    [],
+  );
+  const [suggestedAlbumsLoading, setSuggestedAlbumsLoading] = useState(false);
+  const [suggestedAlbumsError, setSuggestedAlbumsError] = useState('');
   const SENTENCE_STORAGE_KEY = 'sentence-from-words-output';
+  const { user: authUser } = useUser();
   const { clearAgentComment, appendAgentComment, setAgentComment } =
     useAgentComment();
 
@@ -138,6 +153,79 @@ export default function HomeFeature() {
       setGeneratedSentence(`エラー: ${msg}`);
     } finally {
       setIsSentenceGenerating(false);
+    }
+  };
+
+  const handleSaveMood = async () => {
+    if (selectedWords.length === 0) return;
+    setIsSavingMood(true);
+    setMoodRecommendationText('');
+    setSuggestedAlbumsError('');
+    try {
+      const res = await fetch('/api/v1/mood/sentence', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          words: selectedWords,
+          includeRecommendation: true,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        sentence?: string;
+        recommendationText?: string;
+        recordId?: string;
+        error?: string;
+      };
+      if (!res.ok) {
+        setAgentComment(data?.error ?? `HTTP ${res.status}`);
+        return;
+      }
+      if (typeof data.sentence === 'string') {
+        setGeneratedSentence(data.sentence);
+        try {
+          localStorage.setItem(SENTENCE_STORAGE_KEY, data.sentence);
+        } catch {
+          // ignore
+        }
+      }
+      if (
+        typeof data.recommendationText === 'string' &&
+        data.recommendationText
+      ) {
+        setMoodRecommendationText(data.recommendationText);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '保存に失敗しました';
+      setAgentComment(`エラー: ${msg}`);
+    } finally {
+      setIsSavingMood(false);
+    }
+  };
+
+  const handleFetchSuggestedAlbums = async () => {
+    setSuggestedAlbumsLoading(true);
+    setSuggestedAlbumsError('');
+    setSuggestedAlbums([]);
+    try {
+      const res = await fetch('/api/v1/mood/suggested-albums');
+      const data = (await res.json().catch(() => ({}))) as {
+        suggestedAlbums?: SuggestedAlbumItem[];
+        emotionSentence?: string;
+        message?: string;
+        error?: string;
+      };
+      if (!res.ok) {
+        setSuggestedAlbumsError(data?.error ?? '取得に失敗しました');
+        return;
+      }
+      setSuggestedAlbums(data.suggestedAlbums ?? []);
+      if ((data.suggestedAlbums ?? []).length === 0 && data.message) {
+        setSuggestedAlbumsError(data.message);
+      }
+    } catch {
+      setSuggestedAlbumsError('取得に失敗しました');
+    } finally {
+      setSuggestedAlbumsLoading(false);
     }
   };
 
@@ -471,7 +559,7 @@ export default function HomeFeature() {
       <section className="grid gap-4 border-t pt-6">
         <h2 className="text-2xl font-bold">単語から文章</h2>
         <p className="text-sm text-zinc-600 dark:text-zinc-300">
-          感情ワードを選ぶか単語を追加して、文章を生成します。
+          感情ワードを選ぶか単語を追加して、文章を生成します。ログイン中は心象として保存し、感情に合うアルバムを提案できます。
         </p>
         <SentenceGenerateForm
           selectedWords={selectedWords}
@@ -480,11 +568,79 @@ export default function HomeFeature() {
           onGenerate={handleGenerateSentence}
           isGenerating={isSentenceGenerating}
         />
+        {authUser && (
+          <button
+            type="button"
+            onClick={handleSaveMood}
+            disabled={isSavingMood || selectedWords.length === 0}
+            className="w-fit rounded border border-zinc-400 px-4 py-2 text-sm disabled:opacity-50 dark:border-zinc-500"
+          >
+            {isSavingMood ? '保存中...' : '心象として保存'}
+          </button>
+        )}
         <ChatResponse
           key="sentence-response"
           title="作成された文章"
           output={generatedSentence || '（ここに生成された文章が表示されます）'}
         />
+        {moodRecommendationText && (
+          <div className="rounded border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-800">
+            <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+              おすすめの気持ち
+            </p>
+            <p className="text-sm text-zinc-800 dark:text-zinc-200">
+              {moodRecommendationText}
+            </p>
+          </div>
+        )}
+        {authUser && (
+          <div className="grid gap-2">
+            <button
+              type="button"
+              onClick={handleFetchSuggestedAlbums}
+              disabled={suggestedAlbumsLoading}
+              className="w-fit rounded bg-zinc-200 px-4 py-2 text-sm disabled:opacity-50 dark:bg-zinc-700 dark:text-zinc-200"
+            >
+              {suggestedAlbumsLoading
+                ? '取得中...'
+                : '感情に合うアルバムを見る'}
+            </button>
+            {suggestedAlbumsError && (
+              <p className="text-sm text-amber-600 dark:text-amber-400">
+                {suggestedAlbumsError}
+              </p>
+            )}
+            {suggestedAlbums.length > 0 && (
+              <div className="grid gap-2">
+                <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                  見た方がいいアルバム
+                </h3>
+                <ul className="list-inside list-disc space-y-1 text-sm">
+                  {suggestedAlbums.map((a) => (
+                    <li
+                      key={a.id}
+                      className="flex flex-wrap items-center gap-2"
+                    >
+                      <span className="font-medium">{a.name}</span>
+                      {a.reason && (
+                        <span className="text-zinc-600 dark:text-zinc-400">
+                          — {a.reason}
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => fetchAlbum(a.id)}
+                        className="rounded border border-zinc-400 px-2 py-1 text-xs hover:bg-zinc-100 dark:border-zinc-500 dark:hover:bg-zinc-700"
+                      >
+                        このアルバムを表示
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
       </section>
 
       <section className="grid gap-4 border-t pt-6">
