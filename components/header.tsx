@@ -35,7 +35,8 @@ export default function Header({
   return (
     <div>
       {/* Header */}
-      <header className="w-full shadow-card bg-white">
+      {/* pt-safe: iOS ノッチ・ステータスバー分の safe area を確保 */}
+      <header className="w-full shadow-card bg-white pt-safe">
         <div className="mx-auto max-w-5xl px-4 py-3.5">
           <div className="flex items-center justify-between">
             {/* Left */}
@@ -60,10 +61,11 @@ export default function Header({
 
             {/* Right */}
             <div className="flex items-center gap-3">
+              {/* タッチターゲット最小 44px を確保 */}
               <button
                 type="button"
                 onClick={onBellClick}
-                className="h-9 w-9 rounded-full hover:bg-gray-100 flex items-center justify-center"
+                className="h-11 w-11 rounded-full hover:bg-gray-100 flex items-center justify-center"
               >
                 <svg
                   width="24"
@@ -92,7 +94,7 @@ export default function Header({
               <button
                 type="button"
                 onClick={onAvatarClick}
-                className="h-10 w-10 rounded-full overflow-hidden border hover:opacity-90"
+                className="h-11 w-11 rounded-full overflow-hidden border hover:opacity-90 flex items-center justify-center"
               >
                 <Image
                   src={currentAvatarSrc}
@@ -121,22 +123,22 @@ export default function Header({
         />
 
         {/* 中身 */}
-        <div className="relative z-10 mx-auto max-w-5xl px-6">
-          <div className="flex items-center gap-6">
-            {/* human */}
+        <div className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6">
+          <div className="flex items-center gap-3 sm:gap-6">
+            {/* human: モバイルでやや小さく */}
             <Image
               src="/human.svg"
               alt="human"
               width={50}
               height={75}
               sizes="80px"
-              className="w-20 h-auto shrink-0"
+              className="w-14 sm:w-20 h-auto shrink-0"
             />
 
             {/* 吹き出し */}
             <SpeechBubble
               text={agentComment || DEFAULT_BUBBLE_TEXT}
-              className="w-full"
+              className="w-full min-w-0"
             />
           </div>
         </div>

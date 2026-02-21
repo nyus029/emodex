@@ -93,7 +93,7 @@ export default function InsightFeature({ albumId }: InsightFeatureProps) {
   const isPositive = changeValue >= 0;
 
   return (
-    <div className="mx-auto grid max-w-3xl gap-6 p-4">
+    <div className="mx-auto grid max-w-3xl gap-6 p-4 pb-24">
       {/* Header */}
       <div>
         {loadingInsight ? (

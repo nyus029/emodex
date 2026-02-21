@@ -44,3 +44,23 @@ body {
 .shadow-card {
   box-shadow: 0 0 8px 2px #e9edf3;
 }
+
+/* =========================
+   Safe Area Utilities (PWA / iOS)
+   viewportFit=cover と組み合わせて使用
+========================= */
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@utility pl-safe {
+  padding-left: env(safe-area-inset-left, 0px);
+}
+
+@utility pr-safe {
+  padding-right: env(safe-area-inset-right, 0px);
+}
