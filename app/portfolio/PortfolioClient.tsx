@@ -445,32 +445,43 @@ export default function PortfolioClient({
               表示できるグループがありません。
             </div>
           ) : (
-            groups.map((group) => (
-              <div
-                key={group.id}
-                className="flex items-center gap-2 rounded-xl bg-white p-4 shadow-card"
-              >
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-light-gray">
-                  <Image
-                    src="/avatar.svg"
-                    alt="avatar"
-                    width={16}
-                    height={16}
-                    className="h-4 w-4"
-                  />
+            groups.map((group) =>
+              group.adminUserId === userId ? (
+                <button
+                  key={group.id}
+                  type="button"
+                  onClick={() => openEditModal(group)}
+                  className="flex w-full items-center gap-2 rounded-xl bg-white p-4 text-left shadow-card transition-colors hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600"
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-light-gray">
+                    <Image
+                      src="/avatar.svg"
+                      alt="avatar"
+                      width={16}
+                      height={16}
+                      className="h-4 w-4"
+                    />
+                  </div>
+                  <div className="font-medium text-gray-800">{group.name}</div>
+                </button>
+              ) : (
+                <div
+                  key={group.id}
+                  className="flex items-center gap-2 rounded-xl bg-white p-4 shadow-card"
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-light-gray">
+                    <Image
+                      src="/avatar.svg"
+                      alt="avatar"
+                      width={16}
+                      height={16}
+                      className="h-4 w-4"
+                    />
+                  </div>
+                  <div className="font-medium text-gray-800">{group.name}</div>
                 </div>
-                <div className="font-medium text-gray-800">{group.name}</div>
-                {group.adminUserId === userId ? (
-                  <button
-                    type="button"
-                    onClick={() => openEditModal(group)}
-                    className="ml-auto rounded-md border border-gray-300 px-2 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50"
-                  >
-                    編集
-                  </button>
-                ) : null}
-              </div>
-            ))
+              ),
+            )
           )}
         </div>
       </div>
