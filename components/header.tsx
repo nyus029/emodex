@@ -20,7 +20,7 @@ export default function Header({
   onAvatarClick,
 }: HeaderProps) {
   return (
-    <div className="fixed w-full">
+    <div>
       {/* Header */}
       <header className="w-full shadow-card bg-white">
         <div className="mx-auto max-w-5xl px-4 py-3.5">

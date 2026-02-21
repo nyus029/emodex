@@ -32,10 +32,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased">
-        <Header />
-        <main className="pt-45">{children}</main>
-        <Footer />
+      <body className="antialiased bg-light-gray">
+        <div className="flex flex-col h-screen overflow-hidden overscroll-none">
+          <div className="shrink-0">
+            <Header />
+          </div>
+          <main className="grow overflow-y-auto">{children}</main>
+          <div className="shrink-0">
+            <Footer />
+          </div>
+        </div>
       </body>
     </html>
   );
