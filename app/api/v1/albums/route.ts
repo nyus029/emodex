@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { toAlbumResponse, toTagArray } from '@/lib/albums';
-import type { AlbumListItem } from '@/lib/albums';
+import { toAlbumResponse } from '@/lib/albums';
 import { toPathSegment } from '@/lib/path';
+import { getAccessibleAlbumList } from '@/lib/album-access';
 import {
   requireAuth,
   parseBody,
@@ -33,62 +33,7 @@ export async function GET() {
   if (auth.error) return auth.error;
   const { userId, userEmail } = auth.session;
 
-  const ownAlbums = await prisma.album.findMany({
-    where: { userId },
-    include: {
-      group: true,
-      _count: { select: { photoStorages: true } },
-    },
-    orderBy: { createdAt: 'desc' },
-  });
-
-  let sharedAlbums: typeof ownAlbums = [];
-  if (userEmail) {
-    const dbUser = await prisma.user.findUnique({
-      where: { email: userEmail },
-      select: { id: true },
-    });
-
-    if (dbUser) {
-      const memberships = await prisma.membership.findMany({
-        where: { userId: dbUser.id },
-        select: { groupId: true },
-      });
-      const groupIds = memberships.map((m) => m.groupId);
-
-      if (groupIds.length > 0) {
-        sharedAlbums = await prisma.album.findMany({
-          where: {
-            albumType: 'SHARED',
-            groupId: { in: groupIds },
-            NOT: { userId },
-          },
-          include: {
-            group: true,
-            _count: { select: { photoStorages: true } },
-          },
-          orderBy: { createdAt: 'desc' },
-        });
-      }
-    }
-  }
-
-  const toListItem = (album: (typeof ownAlbums)[number]): AlbumListItem => ({
-    id: album.id,
-    name: album.name,
-    albumType: album.albumType,
-    rootPath: album.rootPath,
-    groupId: album.groupId,
-    groupName: album.group?.groupName ?? null,
-    createdTags: toTagArray(album.createdTags),
-    photoStorageCount: album._count.photoStorages,
-  });
-
-  const albums = [
-    ...ownAlbums.map(toListItem),
-    ...sharedAlbums.map(toListItem),
-  ];
-
+  const albums = await getAccessibleAlbumList(userId, userEmail ?? '');
   return jsonSuccess(albums);
 }
 

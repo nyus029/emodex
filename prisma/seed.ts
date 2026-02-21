@@ -420,7 +420,8 @@ async function main() {
         (total, file) => total + file.sizeBytes,
         0,
       );
-      const photoStorage = await prisma.photoStorage.upsert({
+
+      await prisma.photoStorage.upsert({
         where: {
           albumId_name: {
             albumId: album.id,
@@ -440,6 +441,15 @@ async function main() {
           photoCount: storageSeed.files.length,
           totalSizeBytes: BigInt(totalSizeBytes),
           compoundStartDate: albumSeed.compoundStartDate,
+        },
+      });
+
+      const photoStorage = await prisma.photoStorage.findUniqueOrThrow({
+        where: {
+          albumId_name: {
+            albumId: album.id,
+            name: storageSeed.name,
+          },
         },
       });
 

@@ -146,3 +146,14 @@ model DividendEvent {
   @@index([albumId, executedAt])
   @@index([photoStorageId])
 }
+
+model MoodRecord {
+  id                 String    @id @default(cuid())
+  userId             String
+  sentence           String    @db.Text
+  words              Json
+  recommendationText String?   @db.Text
+  createdAt          DateTime  @default(now())
+
+  @@index([userId])
+}

@@ -24,7 +24,7 @@ export default function CompletedDividendItem({
   return (
     <Link
       href={`/dividend/${dividendEventId}`}
-      className="block rounded-xl bg-white px-4 py-3 shadow-card transition-transform hover:translate-y-[-1px]"
+      className="block rounded-xl bg-white px-4 py-3 shadow-card transition-colors hover:bg-gray-50"
     >
       <div className="flex items-center gap-4">
         <Image
