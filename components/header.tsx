@@ -96,9 +96,12 @@ export default function Header({
 
       <div className="relative w-full bg-background-light overflow-hidden">
         {/* wave（背景） */}
-        <img
+        <Image
           src="/wave.svg"
           alt="wave"
+          width={393}
+          height={104}
+          sizes="100vw"
           className="absolute left-0 top-1 w-full h-auto z-0"
         />
 
@@ -106,9 +109,12 @@ export default function Header({
         <div className="relative z-10 mx-auto max-w-5xl px-6">
           <div className="flex items-center gap-6">
             {/* human */}
-            <img
+            <Image
               src="/human.svg"
               alt="human"
+              width={50}
+              height={75}
+              sizes="80px"
               className="w-20 h-auto shrink-0"
             />
 
