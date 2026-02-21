@@ -36,7 +36,8 @@ export default function Footer() {
   const pathname = usePathname();
 
   return (
-    <footer className="bg-white shadow-card">
+    // pb-safe: iOS ホームインジケーター分の safe area を確保
+    <footer className="bg-white shadow-card pb-safe">
       <nav className="flex items-center h-18">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
@@ -45,7 +46,7 @@ export default function Footer() {
             <Link
               key={item.name}
               href={item.href}
-              className="flex flex-1 flex-col items-center justify-center gap-1 text-xs"
+              className="flex flex-1 flex-col items-center justify-center gap-1 text-xs min-h-11"
             >
               <Image
                 src={item.icon}
