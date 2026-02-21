@@ -40,6 +40,16 @@ export function calculateAlbumEmo(
   );
 }
 
+export function calculateAlbumEmoWithBoost(
+  storages: StorageParams[],
+  boostCount: number,
+  asOfDate?: Date,
+): number {
+  const base = calculateAlbumEmo(storages, asOfDate);
+  if (boostCount <= 0) return base;
+  return base * (1 + 0.5 * boostCount);
+}
+
 export function calculateDayOverDayChange(storages: StorageParams[]): {
   value: number;
   percentage: number;
@@ -49,6 +59,29 @@ export function calculateDayOverDayChange(storages: StorageParams[]): {
   yesterday.setDate(yesterday.getDate() - 1);
 
   const todayValue = calculateAlbumEmo(storages, now);
+  const yesterdayValue = calculateAlbumEmo(storages, yesterday);
+
+  const value = todayValue - yesterdayValue;
+  const percentage = yesterdayValue > 0 ? (value / yesterdayValue) * 100 : 0;
+
+  return {
+    value: Math.round(value * 100) / 100,
+    percentage: Math.round(percentage * 100) / 100,
+  };
+}
+
+export function calculateDayOverDayChangeWithBoost(
+  storages: StorageParams[],
+  boostCount: number,
+): {
+  value: number;
+  percentage: number;
+} {
+  const now = new Date();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  const todayValue = calculateAlbumEmoWithBoost(storages, boostCount, now);
   const yesterdayValue = calculateAlbumEmo(storages, yesterday);
 
   const value = todayValue - yesterdayValue;

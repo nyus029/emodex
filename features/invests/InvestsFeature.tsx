@@ -1,7 +1,8 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { upload } from '@vercel/blob/client';
+import { useRouter } from 'next/navigation';
 import EmoTypeSelector from '@/components/invests/EmoTypeSelector';
 import GroupSelector from '@/components/invests/GroupSelector';
 import AlbumSelector from '@/components/invests/AlbumSelector';
@@ -14,6 +15,7 @@ import { generateStorageName } from '@/lib/invest';
 import type { GroupItem } from '@/types/api';
 
 export default function InvestsFeature() {
+  const router = useRouter();
   const [emoType, setEmoType] = useState<'PRIVATE' | 'SHARED'>('PRIVATE');
   const [groups, setGroups] = useState<GroupItem[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
@@ -28,6 +30,7 @@ export default function InvestsFeature() {
   const [message, setMessage] = useState('');
   const [isError, setIsError] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const filteredAlbums = albums.filter((a) => {
     if (emoType === 'PRIVATE') return a.albumType === 'PRIVATE';
@@ -63,6 +66,14 @@ export default function InvestsFeature() {
     fetchAlbums();
     fetchGroups();
   }, [fetchAlbums, fetchGroups]);
+
+  useEffect(() => {
+    return () => {
+      if (redirectTimerRef.current) {
+        clearTimeout(redirectTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleEmoTypeChange = (type: 'PRIVATE' | 'SHARED') => {
     setEmoType(type);
@@ -227,6 +238,9 @@ export default function InvestsFeature() {
         count > 0 ? `${count}枚の画像を追加しました。` : '画像を追加しました。',
       );
       setIsError(false);
+      redirectTimerRef.current = setTimeout(() => {
+        router.push(`/invests/${selectedAlbumId}/insight`);
+      }, 1200);
     } catch (error) {
       await cleanupUploadedBlobs();
       setMessage(

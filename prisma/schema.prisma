@@ -9,7 +9,7 @@ datasource db {
 model User {
   id        Int      @id @default(autoincrement())
   email     String   @unique
-  name      String  
+  name      String
   picture   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -17,6 +17,8 @@ model User {
   adminGroups Group[] @relation("GroupAdmin")
   systemAdministrator SystemAdministrator?
   createdSystemAdministrators SystemAdministrator[] @relation("SystemAdministratorCreatedBy")
+  dividendApprovalRequests DividendApprovalRequest[] @relation("DividendApprovalRequester")
+  dividendApprovals        DividendApproval[]        @relation("DividendApprover")
 }
 
 model Group {
@@ -68,6 +70,7 @@ model Album {
   updatedAt               DateTime        @updatedAt
   photoStorages           PhotoStorage[]
   dividendEvents          DividendEvent[]
+  approvalRequests        DividendApprovalRequest[]
 }
 
 model PhotoStorage {
@@ -86,6 +89,7 @@ model PhotoStorage {
   photos            PhotoStoragePhoto[]
   emoSnapshots      EmoSnapshot[]
   dividendEvents    DividendEvent[]
+  approvalRequests  DividendApprovalRequest[]
 
   @@index([albumId, createdAt])
   @@unique([albumId, name])
@@ -132,19 +136,62 @@ enum DividendAction {
 }
 
 model DividendEvent {
-  id              String         @id @default(cuid())
-  albumId         String
-  album           Album          @relation(fields: [albumId], references: [id], onDelete: Cascade)
-  photoStorageId  String
-  photoStorage    PhotoStorage   @relation(fields: [photoStorageId], references: [id], onDelete: Cascade)
-  action          DividendAction
-  emoValueAtEvent Float
-  previousBaseEmo Int
-  newBaseEmo      Int
-  executedAt      DateTime       @default(now())
+  id                String                   @id @default(cuid())
+  albumId           String
+  album             Album                    @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  photoStorageId    String
+  photoStorage      PhotoStorage             @relation(fields: [photoStorageId], references: [id], onDelete: Cascade)
+  action            DividendAction
+  emoValueAtEvent   Float
+  previousBaseEmo   Int
+  newBaseEmo        Int
+  executedAt        DateTime                 @default(now())
+  approvalRequestId String?                  @unique
+  approvalRequest   DividendApprovalRequest? @relation(fields: [approvalRequestId], references: [id])
 
   @@index([albumId, executedAt])
   @@index([photoStorageId])
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  EXPIRED
+}
+
+model DividendApprovalRequest {
+  id                String              @id @default(cuid())
+  albumId           String
+  album             Album               @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  photoStorageId    String
+  photoStorage      PhotoStorage        @relation(fields: [photoStorageId], references: [id], onDelete: Cascade)
+  requestedByUserId Int
+  requestedByUser   User                @relation("DividendApprovalRequester", fields: [requestedByUserId], references: [id])
+  status            ApprovalStatus      @default(PENDING)
+  emoValueAtRequest Float
+  expiresAt         DateTime
+  completedAt       DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  approvals         DividendApproval[]
+  dividendEvent     DividendEvent?
+
+  @@index([albumId, status])
+  @@index([photoStorageId])
+}
+
+model DividendApproval {
+  id                String                  @id @default(cuid())
+  approvalRequestId String
+  approvalRequest   DividendApprovalRequest @relation(fields: [approvalRequestId], references: [id], onDelete: Cascade)
+  userId            Int
+  user              User                    @relation("DividendApprover", fields: [userId], references: [id])
+  isApproved        Boolean                 @default(false)
+  approvedAt        DateTime?
+  createdAt         DateTime                @default(now())
+
+  @@unique([approvalRequestId, userId])
+  @@index([userId])
 }
 
 model MoodRecord {
@@ -153,6 +200,7 @@ model MoodRecord {
   sentence           String    @db.Text
   words              Json
   recommendationText String?   @db.Text
+  boostedAlbumIds    Json?
   createdAt          DateTime  @default(now())
 
   @@index([userId])

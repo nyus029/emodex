@@ -4,22 +4,27 @@ import Link from 'next/link';
 interface CompletedDividendItemProps {
   dividendEventId: string;
   albumName: string;
+  albumType: string;
   photoStorageName: string;
   action: 'REINVEST' | 'RECEIVE';
   emoValueAtEvent: number;
   executedAt: string;
+  thumbnailUrl: string | null;
 }
 
 export default function CompletedDividendItem({
   dividendEventId,
   albumName,
+  albumType,
   photoStorageName,
   action,
   emoValueAtEvent,
   executedAt,
+  thumbnailUrl,
 }: CompletedDividendItemProps) {
   const date = new Date(executedAt);
   const formattedDate = date.toLocaleDateString('ja-JP');
+  const peopleIcon = albumType === 'SHARED' ? '/users.svg' : '/user.svg';
 
   return (
     <Link
@@ -27,17 +32,27 @@ export default function CompletedDividendItem({
       className="block rounded-xl bg-white px-4 py-3 shadow-card transition-colors hover:bg-gray-50"
     >
       <div className="flex items-center gap-4">
-        <Image
-          src="/mockphoto.png"
-          alt="thumbnail"
-          width={64}
-          height={64}
-          className="h-16 w-16 shrink-0 rounded-xl object-cover"
-        />
+        {thumbnailUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={thumbnailUrl}
+            alt="thumbnail"
+            className="h-16 w-16 shrink-0 rounded-xl object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <Image
+            src="/mockphoto.png"
+            alt="thumbnail"
+            width={64}
+            height={64}
+            className="h-16 w-16 shrink-0 rounded-xl object-cover"
+          />
+        )}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <Image
-              src="/users.svg"
+              src={peopleIcon}
               alt="user"
               width={20}
               height={20}
