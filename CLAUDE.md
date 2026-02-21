@@ -156,7 +156,6 @@ emodex/
 Copy `.env.example` to `.env` and fill in values:
 
 ```bash
-PRE_RELEASE_LOCK=true           # Set false to open production traffic
 DATABASE_URL="mysql://emodex:emodex@localhost:3307/emodex"
 
 # Mastra chat — omit for mock fallback
