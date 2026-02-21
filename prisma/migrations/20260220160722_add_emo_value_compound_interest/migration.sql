@@ -10,7 +10,7 @@ ALTER TABLE `PhotoStorage` ADD COLUMN `baseEmoPerPhoto` INTEGER NOT NULL DEFAULT
     ADD COLUMN `isCompoundActive` BOOLEAN NOT NULL DEFAULT true;
 
 -- DropTable
-DROP TABLE `PhotoStorage_old`;
+DROP TABLE IF EXISTS `PhotoStorage_old`;
 
 -- CreateTable
 CREATE TABLE `EmoSnapshot` (
