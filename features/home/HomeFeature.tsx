@@ -433,93 +433,123 @@ export default function HomeFeature() {
   };
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-6 px-4 py-6 sm:px-6 sm:py-10 pb-24">
-      <div className="flex gap-4">
-        <Link
-          href="/admin"
-          className="text-sm underline hover:text-zinc-600 dark:hover:text-zinc-300"
-        >
-          管理者インターフェースへ移動
-        </Link>
-        <Link
-          href="/insight"
-          className="text-sm underline hover:text-zinc-600 dark:hover:text-zinc-300"
-        >
-          指数関数グラフへ移動
-        </Link>
-      </div>
-      <h1 className="text-2xl font-bold">Mastra Stream Chat (Local MVP)</h1>
-      <p className="text-sm text-zinc-600 dark:text-zinc-300">
-        OPENAI_API_KEY が未設定でもモックで stream 表示できます。
-      </p>
-
-      <ChatForm
-        value={input}
-        isLoading={isLoading}
-        onChange={setInput}
-        onSubmit={onSubmit}
-      />
-
-      <ChatResponse output={output} />
-
-      <NotificationTest
-        value={notificationMessage}
-        onChange={setNotificationMessage}
-        onTest={onClickTestNotification}
-      />
-
-      <section className="grid gap-4 border-t pt-6">
-        <h2 className="text-2xl font-bold">単語から文章</h2>
-        <p className="text-sm text-zinc-600 dark:text-zinc-300">
-          感情ワードを選ぶか単語を追加して、文章を生成します。
-        </p>
-        <SentenceGenerateForm
-          selectedWords={selectedWords}
-          onToggleWord={handleToggleWord}
-          onAddWord={handleAddWord}
-          onGenerate={handleGenerateSentence}
-          isGenerating={isSentenceGenerating}
-        />
-        <ChatResponse
-          key="sentence-response"
-          title="作成された文章"
-          output={generatedSentence || '（ここに生成された文章が表示されます）'}
-        />
-      </section>
-
-      <section className="grid gap-4 border-t pt-6">
-        <h2 className="text-2xl font-bold">Albums API Playground</h2>
-        <p className="text-sm text-zinc-600 dark:text-zinc-300">
-          アルバム作成とフォトストレージ一括追加をこの画面から確認できます。
-        </p>
-        <AlbumCreateForm
-          name={albumName}
-          plannedDividend={plannedDividend}
-          tags={albumTags}
-          requiredAtAlbumCreation={requiredAtAlbumCreation}
-          isSubmitting={isAlbumCreating}
-          onNameChange={setAlbumName}
-          onPlannedDividendChange={setPlannedDividend}
-          onTagsChange={setAlbumTags}
-          onRequiredAtAlbumCreationChange={setRequiredAtAlbumCreation}
-          onSubmit={onSubmitCreateAlbum}
-        />
-        <PhotoStorageBulkForm
-          albumId={selectedAlbumId || '未選択'}
-          storageName={photoStorageName}
-          files={photoFiles}
-          isSubmitting={isPhotoStorageAdding}
-          onStorageNameChange={setPhotoStorageName}
-          onFilesChange={setPhotoFiles}
-          onSubmit={onSubmitAddPhotoStorages}
-        />
-        {albumMessage ? (
-          <p className="text-sm text-zinc-700 dark:text-zinc-200">
-            {albumMessage}
+    <div className="min-h-screen bg-background-light p-5">
+      <div className="mx-auto max-w-md space-y-4 pb-24">
+        {/* ページヘッダーカード */}
+        <div className="rounded-xl bg-white px-5 py-4 shadow-card">
+          <h1 className="text-[15px] font-medium text-gray-900">
+            Mastra Stream Chat
+          </h1>
+          <p className="mt-1 text-[13px] text-gray-500">
+            OPENAI_API_KEY が未設定でもモックで stream 表示できます。
           </p>
+          <div className="mt-3 flex gap-3">
+            <Link href="/admin" className="text-xs text-gray-500 underline">
+              管理者
+            </Link>
+            <Link href="/insight" className="text-xs text-gray-500 underline">
+              インサイト
+            </Link>
+          </div>
+        </div>
+
+        {/* チャット入力 */}
+        <div className="rounded-xl bg-white px-4 py-4 shadow-card">
+          <ChatForm
+            value={input}
+            isLoading={isLoading}
+            onChange={setInput}
+            onSubmit={onSubmit}
+          />
+        </div>
+
+        {/* チャットレスポンス */}
+        <div className="rounded-xl bg-white px-4 py-3 shadow-card">
+          <ChatResponse output={output} />
+        </div>
+
+        {/* 通知テスト */}
+        <div className="rounded-xl bg-white px-4 py-3 shadow-card">
+          <NotificationTest
+            value={notificationMessage}
+            onChange={setNotificationMessage}
+            onTest={onClickTestNotification}
+          />
+        </div>
+
+        {/* 単語から文章セクション */}
+        <h2 className="px-1 text-sm font-semibold text-gray-600">
+          単語から文章
+        </h2>
+
+        <div className="rounded-xl bg-white px-4 py-4 shadow-card">
+          <p className="mb-3 text-[13px] text-gray-500">
+            感情ワードを選ぶか単語を追加して、文章を生成します。
+          </p>
+          <SentenceGenerateForm
+            selectedWords={selectedWords}
+            onToggleWord={handleToggleWord}
+            onAddWord={handleAddWord}
+            onGenerate={handleGenerateSentence}
+            isGenerating={isSentenceGenerating}
+          />
+        </div>
+
+        <div className="rounded-xl bg-white px-4 py-3 shadow-card">
+          <ChatResponse
+            key="sentence-response"
+            title="作成された文章"
+            output={
+              generatedSentence || '（ここに生成された文章が表示されます）'
+            }
+          />
+        </div>
+
+        {/* Albums API Playground セクション */}
+        <h2 className="px-1 text-sm font-semibold text-gray-600">
+          Albums API Playground
+        </h2>
+
+        <div className="rounded-xl bg-white px-4 py-4 shadow-card">
+          <p className="mb-3 text-[13px] text-gray-500">
+            アルバム作成とフォトストレージ一括追加をこの画面から確認できます。
+          </p>
+          <AlbumCreateForm
+            name={albumName}
+            plannedDividend={plannedDividend}
+            tags={albumTags}
+            requiredAtAlbumCreation={requiredAtAlbumCreation}
+            isSubmitting={isAlbumCreating}
+            onNameChange={setAlbumName}
+            onPlannedDividendChange={setPlannedDividend}
+            onTagsChange={setAlbumTags}
+            onRequiredAtAlbumCreationChange={setRequiredAtAlbumCreation}
+            onSubmit={onSubmitCreateAlbum}
+          />
+        </div>
+
+        <div className="rounded-xl bg-white px-4 py-4 shadow-card">
+          <PhotoStorageBulkForm
+            albumId={selectedAlbumId || '未選択'}
+            storageName={photoStorageName}
+            files={photoFiles}
+            isSubmitting={isPhotoStorageAdding}
+            onStorageNameChange={setPhotoStorageName}
+            onFilesChange={setPhotoFiles}
+            onSubmit={onSubmitAddPhotoStorages}
+          />
+        </div>
+
+        {albumMessage ? (
+          <div className="rounded-xl bg-white px-4 py-3 shadow-card">
+            <p className="text-[13px] text-gray-800">{albumMessage}</p>
+          </div>
         ) : null}
-        <AlbumDetailPanel album={album} />
-      </section>
-    </main>
+
+        <div className="rounded-xl bg-white px-4 py-3 shadow-card">
+          <AlbumDetailPanel album={album} />
+        </div>
+      </div>
+    </div>
   );
 }

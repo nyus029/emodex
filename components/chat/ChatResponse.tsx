@@ -8,9 +8,9 @@ export default function ChatResponse({
   title = 'Response',
 }: ChatResponseProps) {
   return (
-    <section className="rounded border border-zinc-300 p-4">
-      <h2 className="mb-2 font-semibold">{title}</h2>
-      <pre className="whitespace-pre-wrap text-sm">
+    <section>
+      <h2 className="mb-2 text-[13px] font-medium text-gray-900">{title}</h2>
+      <pre className="whitespace-pre-wrap text-[13px] text-gray-700">
         {output || '（ここにストリーム結果が表示されます）'}
       </pre>
     </section>

@@ -25,11 +25,11 @@ export default function WordInput({ onAdd }: WordInputProps) {
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder="単語を入力して追加"
-        className="min-w-[12rem] rounded border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800"
+        className="min-w-[12rem] rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900"
       />
       <button
         type="submit"
-        className="rounded bg-zinc-800 px-3 py-2 text-sm text-white dark:bg-zinc-200 dark:text-zinc-900"
+        className="rounded-lg bg-light-gray px-3 py-2 text-sm font-medium text-gray-600"
       >
         追加
       </button>
