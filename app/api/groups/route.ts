@@ -63,18 +63,6 @@ export async function POST(request: NextRequest) {
         })
       : [];
 
-  const foundEmailSet = new Set(membersToAdd.map((member) => member.email));
-  const missingEmails = uniqueMemberEmails.filter(
-    (email) => !foundEmailSet.has(email),
-  );
-
-  if (missingEmails.length > 0) {
-    return jsonError(
-      `Users not found for emails: ${missingEmails.join(', ')}`,
-      400,
-    );
-  }
-
   const group = await prisma.$transaction(async (tx) => {
     const createdGroup = await tx.group.create({
       data: { groupName, adminUserId: currentUser.user.id },

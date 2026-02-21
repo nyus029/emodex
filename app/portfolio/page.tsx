@@ -5,6 +5,7 @@ import PortfolioClient from './PortfolioClient';
 type PortfolioItem = {
   id: number;
   name: string;
+  adminUserId: number;
 };
 
 export default async function PortfolioPage() {
@@ -29,6 +30,7 @@ export default async function PortfolioPage() {
       groups = memberships.map((membership) => ({
         id: membership.groupId,
         name: membership.group.groupName,
+        adminUserId: membership.group.adminUserId,
       }));
     }
   }
