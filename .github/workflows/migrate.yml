@@ -31,6 +31,12 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate
 
+      - name: Resolve failed migration
+        run: npx prisma migrate resolve --rolled-back 20260220160722_add_emo_value_compound_interest
+        env:
+          DATABASE_URL: ${{ secrets.TIDB_DATABASE_URL }}
+        continue-on-error: true
+
       - name: Run migrations
         run: npx prisma migrate deploy
         env:
