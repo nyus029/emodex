@@ -32,6 +32,6 @@ jobs:
         run: npx prisma generate
 
       - name: Run migrations
-        run: npx prisma migrate deploy --config prisma/prisma.config.ts
+        run: npx prisma migrate deploy
         env:
           DATABASE_URL: ${{ secrets.TIDB_DATABASE_URL }}
