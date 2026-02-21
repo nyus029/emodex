@@ -12,16 +12,16 @@ export async function proxy(request: Request) {
   const authResponse = await auth0.middleware(request);
   const { pathname, search } = new URL(request.url);
 
-  if (
-    pathname.startsWith('/auth/') ||
-    pathname.startsWith('/api/') ||
-    pathname === '/login'
-  ) {
+  if (pathname.startsWith('/auth/') || pathname === '/login') {
     return authResponse;
   }
 
   const session = await auth0.getSession(request as NextRequest);
   if (!session?.user) {
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const loginUrl = new URL('/auth/login', request.url);
     loginUrl.searchParams.set('returnTo', `${pathname}${search}`);
     return NextResponse.redirect(loginUrl);
@@ -32,6 +32,6 @@ export async function proxy(request: Request) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|_next/data|favicon.ico|icon|apple-icon|manifest.webmanifest|sw\\.js|api/health|api/health/db|sitemap.xml|robots.txt).*)',
+    '/((?!_next/static|_next/image|_next/data|favicon.ico|icon|apple-icon|manifest.webmanifest|sw\\.js|sitemap.xml|robots.txt).*)',
   ],
 };
