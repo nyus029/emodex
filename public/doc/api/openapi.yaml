@@ -1538,6 +1538,7 @@ components:
       required:
         - albumBasicInfo
         - emoValueInfo
+        - photoStorages
       properties:
         albumBasicInfo:
           type: object
@@ -1570,6 +1571,32 @@ components:
               example: 8500
             dayOverDayChange:
               $ref: '#/components/schemas/EmoValueChange'
+        photoStorages:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/AlbumInsightPhotoStorage'
+    AlbumInsightPhotoStorage:
+      type: object
+      required:
+        - id
+        - name
+        - storagePath
+        - photoCount
+      properties:
+        id:
+          type: string
+          example: ps_123
+        name:
+          type: string
+          example: 2026-02-旅行
+        storagePath:
+          type: string
+          example: 家族アルバム/2026-02-旅行
+        photoCount:
+          type: integer
+          minimum: 0
+          example: 8
     EmoValueChange:
       type: object
       required:
