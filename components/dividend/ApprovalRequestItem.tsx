@@ -2,77 +2,57 @@
 
 import Image from 'next/image';
 import { useState } from 'react';
-import { sendDividendReceivedNotification } from '@/lib/dividend-notification';
 
-interface PendingDividendItemProps {
-  albumId: string;
+interface ApprovalRequestItemProps {
+  approvalRequestId: string;
   albumName: string;
-  albumType: string;
-  plannedDividend: string;
-  photoStorageId: string;
   photoStorageName: string;
   photoCount: number;
-  emoValue: number;
+  emoValueAtRequest: number;
   tags: string[];
+  requestedBy: { id: number; name: string };
+  expiresAt: string;
+  approvedCount: number;
+  totalCount: number;
+  myApproval: boolean;
   onComplete: () => void;
 }
 
-export default function PendingDividendItem({
-  albumId,
+export default function ApprovalRequestItem({
+  approvalRequestId,
   albumName,
-  albumType,
-  plannedDividend,
-  photoStorageId,
   photoStorageName,
   photoCount,
-  emoValue,
+  emoValueAtRequest,
   tags,
+  requestedBy,
+  expiresAt,
+  approvedCount,
+  totalCount,
+  myApproval,
   onComplete,
-}: PendingDividendItemProps) {
-  const [confirming, setConfirming] = useState<'REINVEST' | 'RECEIVE' | null>(
-    null,
-  );
+}: ApprovalRequestItemProps) {
+  const [confirming, setConfirming] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const formattedPlannedDividend = new Date(plannedDividend).toLocaleDateString(
-    'ja-JP',
-  );
 
-  const isShared = albumType === 'SHARED';
+  const formattedExpiry = new Date(expiresAt).toLocaleDateString('ja-JP');
 
-  async function handleAction(action: 'REINVEST' | 'RECEIVE') {
+  async function handleApprove() {
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch(`/api/v1/albums/${albumId}/dividend`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, photoStorageId }),
-      });
+      const res = await fetch(
+        `/api/v1/dividend/approvals/${approvalRequestId}`,
+        { method: 'POST' },
+      );
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(
-          (body as { error?: string }).error ?? 'Failed to execute dividend',
+          (body as { error?: string }).error ?? 'Failed to approve',
         );
       }
-      const body = (await res.json().catch(() => null)) as {
-        approvalRequired?: boolean;
-        events?: Array<{ id: string; photoStorageName?: string }>;
-      } | null;
-
-      if (action === 'RECEIVE' && !body?.approvalRequired) {
-        if (body?.events) {
-          for (const ev of body.events) {
-            if (ev.photoStorageName) {
-              sendDividendReceivedNotification(
-                ev.photoStorageName,
-                ev.id,
-              ).catch(() => {});
-            }
-          }
-        }
-      }
-      setConfirming(null);
+      setConfirming(false);
       onComplete();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unknown error');
@@ -82,7 +62,6 @@ export default function PendingDividendItem({
   }
 
   if (confirming) {
-    const isSharedReceive = isShared && confirming === 'RECEIVE';
     return (
       <div className="grid gap-3 rounded-xl bg-white px-4 py-3 shadow-card">
         <div className="grid gap-1">
@@ -92,30 +71,22 @@ export default function PendingDividendItem({
           </p>
         </div>
         <p className="text-sm text-gray-800">
-          {confirming === 'REINVEST'
-            ? '配当再投資を実行しますか？ 基準価格が2倍になり、複利が再スタートします。'
-            : isSharedReceive
-              ? `配当受取を申請しますか？ グループ全員の承認後に配当が実行されます（エモ価 ${Math.round(emoValue).toLocaleString()} emo）。`
-              : `配当受取を実行しますか？ エモ価 ${Math.round(emoValue).toLocaleString()} emo を受け取り、複利が停止します。`}
+          この配当受取を承認しますか？ 全員が承認すると配当が実行されます。
         </p>
         {error && <p className="text-xs text-red-600">{error}</p>}
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => handleAction(confirming)}
+            onClick={handleApprove}
             disabled={submitting}
             className="h-[38px] rounded-lg bg-green px-4 text-sm font-semibold text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {submitting
-              ? '処理中...'
-              : isSharedReceive
-                ? '申請する'
-                : '実行する'}
+            {submitting ? '処理中...' : '承認する'}
           </button>
           <button
             type="button"
             onClick={() => {
-              setConfirming(null);
+              setConfirming(false);
               setError(null);
             }}
             disabled={submitting}
@@ -153,19 +124,20 @@ export default function PendingDividendItem({
           </div>
           <div className="mt-1 space-y-1 text-[13px] text-gray-800">
             <div className="flex gap-3">
-              <span className="w-12 text-gray-500">配当日</span>
-              <span className="tabular-nums">{formattedPlannedDividend}</span>
-            </div>
-            <div className="flex gap-3">
               <span className="w-12 text-gray-500">期限</span>
               <span className="truncate text-gray-700">{photoStorageName}</span>
+            </div>
+            <div className="flex gap-3">
+              <span className="w-12 text-gray-500">申請者</span>
+              <span className="truncate text-gray-700">{requestedBy.name}</span>
             </div>
           </div>
         </div>
       </div>
+
       <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
         <span>{photoCount} 枚</span>
-        <span>{Math.round(emoValue).toLocaleString()} emo</span>
+        <span>{Math.round(emoValueAtRequest).toLocaleString()} emo</span>
         {tags.map((tag) => (
           <span
             key={tag}
@@ -175,21 +147,27 @@ export default function PendingDividendItem({
           </span>
         ))}
       </div>
-      <div className="flex gap-2 pt-1">
-        <button
-          type="button"
-          onClick={() => setConfirming('REINVEST')}
-          className="h-[40px] flex-1 rounded-lg bg-green px-4 text-sm font-semibold text-white transition-colors hover:bg-green-700"
-        >
-          再投資する
-        </button>
-        <button
-          type="button"
-          onClick={() => setConfirming('RECEIVE')}
-          className="h-[40px] flex-1 rounded-lg border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
-        >
-          {isShared ? '受取を申請' : '受け取る'}
-        </button>
+
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-gray-500">
+          <span>
+            承認 {approvedCount}/{totalCount}
+          </span>
+          <span className="ml-2">期限 {formattedExpiry}</span>
+        </div>
+        {myApproval ? (
+          <span className="rounded-lg bg-gray-100 px-3 py-2 text-sm font-semibold text-gray-500">
+            承認済み
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setConfirming(true)}
+            className="h-[40px] rounded-lg bg-green px-6 text-sm font-semibold text-white transition-colors hover:bg-green-700"
+          >
+            承認する
+          </button>
+        )}
       </div>
     </div>
   );
