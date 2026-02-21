@@ -1,40 +1,51 @@
-import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { toAlbumResponse } from '@/lib/albums';
+import { findAccessibleAlbum } from '@/lib/album-access';
+import { requireAuth, jsonSuccess, jsonError } from '@/lib/api-utils';
+import type { RouteContext } from '@/types/api';
 
-type RouteContext = {
-  params: Promise<{
-    id: string;
-  }>;
-};
+export async function GET(
+  _request: Request,
+  context: RouteContext<{ id: string }>,
+) {
+  const auth = await requireAuth();
+  if (auth.error) return auth.error;
+  const { userId, userEmail } = auth.session;
 
-export async function GET(_request: Request, context: RouteContext) {
   const { id } = await context.params;
 
-  const mockAlbum = {
+  const accessibleAlbum = await findAccessibleAlbum(
     id,
-    albumBasicInfo: {
-      albumName: '思い出アルバム',
-      createdAt: '2026-02-13T00:00:00.000Z',
-      plannedDividend: '2026-03-31',
-      createdTags: ['家族', '旅行', 'イベント'],
-      requiredAtAlbumCreation: true,
-    },
-    updateNotification: {
-      addedFolderHistory: [
-        {
-          folderName: '2026_01_京都旅行',
-          addedAt: '2026-01-15T09:30:00.000Z',
-        },
-        {
-          folderName: '2026_02_誕生日会',
-          addedAt: '2026-02-10T14:20:00.000Z',
-        },
-      ],
-    },
-    dividendNotification: {
-      recordedAtTransaction: true,
-      dividendDates: ['2025-12-31', '2026-01-31', '2026-02-12'],
-    },
-  };
+    userId,
+    userEmail ?? '',
+  );
 
-  return NextResponse.json(mockAlbum, { status: 200 });
+  if (!accessibleAlbum) {
+    return jsonError('Album not found', 404);
+  }
+
+  const album = await prisma.album.findUnique({
+    where: { id },
+    include: {
+      group: true,
+      photoStorages: {
+        orderBy: {
+          createdAt: 'desc',
+        },
+        include: {
+          photos: {
+            orderBy: {
+              createdAt: 'asc',
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!album) {
+    return jsonError('Album not found', 404);
+  }
+
+  return jsonSuccess(toAlbumResponse(album));
 }

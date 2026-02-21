@@ -52,3 +52,8 @@ public/workbox-*.js.map.br.gz.br
 public/workbox-*.js.map.br.gz.br.gz
 public/workbox-*.js.map.br.gz.br.gz.br
 public/workbox-*.js.map.br.gz.br.gz.br.gz
+
+# mastra
+*.db
+*.db-shm
+*.db-wal

@@ -9,7 +9,140 @@ datasource db {
 model User {
   id        Int      @id @default(autoincrement())
   email     String   @unique
-  name      String?
+  name      String  
+  picture   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  memberships Membership[]
+  adminGroups Group[] @relation("GroupAdmin")
+  systemAdministrator SystemAdministrator?
+  createdSystemAdministrators SystemAdministrator[] @relation("SystemAdministratorCreatedBy")
+}
+
+model Group {
+  id          Int          @id @default(autoincrement())
+  groupName   String
+  adminUserId Int
+  adminUser   User         @relation("GroupAdmin", fields: [adminUserId], references: [id])
+  memberships Membership[]
+  albums      Album[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Membership {
+  id        Int             @id @default(autoincrement())
+  userId    Int
+  groupId   Int
+  role      MembershipRole  @default(MEMBER)
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group     Group           @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@unique([userId, groupId])
+}
+
+enum MembershipRole {
+  ADMIN
+  MEMBER
+}
+
+enum AlbumType {
+  PRIVATE
+  SHARED
+}
+
+model Album {
+  id                      String          @id @default(cuid())
+  userId                  String
+  name                    String          @unique
+  rootPath                String          @unique
+  albumType               AlbumType       @default(PRIVATE)
+  groupId                 Int?
+  group                   Group?          @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  plannedDividend         DateTime?
+  createdTags             Json?
+  requiredAtAlbumCreation Boolean         @default(false)
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+  photoStorages           PhotoStorage[]
+  dividendEvents          DividendEvent[]
+}
+
+model PhotoStorage {
+  id                String              @id @default(cuid())
+  albumId           String
+  album             Album               @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  name              String
+  storagePath       String
+  photoCount        Int
+  totalSizeBytes    BigInt              @db.BigInt
+  tags              Json?
+  baseEmoPerPhoto   Int                 @default(100)
+  compoundStartDate DateTime            @default(now())
+  isCompoundActive  Boolean             @default(true)
+  createdAt         DateTime            @default(now())
+  photos            PhotoStoragePhoto[]
+  emoSnapshots      EmoSnapshot[]
+  dividendEvents    DividendEvent[]
+
+  @@index([albumId, createdAt])
+  @@unique([albumId, name])
+}
+
+model PhotoStoragePhoto {
+  id             String       @id @default(cuid())
+  photoStorageId String
+  photoStorage   PhotoStorage @relation(fields: [photoStorageId], references: [id], onDelete: Cascade)
+  fileName       String
+  blobPath       String
+  blobUrl        String       @db.Text
+  contentType    String?
+  sizeBytes      BigInt       @db.BigInt
+  createdAt      DateTime     @default(now())
+
+  @@index([photoStorageId, createdAt])
+}
+
+model SystemAdministrator {
+  id              String  @id @default(cuid())
+  userId          Int     @unique
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdByUserId Int?
+  createdByUser   User?   @relation("SystemAdministratorCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdAt       DateTime @default(now())
+}
+
+model EmoSnapshot {
+  id             String       @id @default(cuid())
+  photoStorageId String
+  photoStorage   PhotoStorage @relation(fields: [photoStorageId], references: [id], onDelete: Cascade)
+  snapshotDate   DateTime     @db.Date
+  emoValue       Float
+  createdAt      DateTime     @default(now())
+
+  @@unique([photoStorageId, snapshotDate])
+  @@index([photoStorageId, snapshotDate])
+}
+
+enum DividendAction {
+  REINVEST
+  RECEIVE
+}
+
+model DividendEvent {
+  id              String         @id @default(cuid())
+  albumId         String
+  album           Album          @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  photoStorageId  String
+  photoStorage    PhotoStorage   @relation(fields: [photoStorageId], references: [id], onDelete: Cascade)
+  action          DividendAction
+  emoValueAtEvent Float
+  previousBaseEmo Int
+  newBaseEmo      Int
+  executedAt      DateTime       @default(now())
+
+  @@index([albumId, executedAt])
+  @@index([photoStorageId])
 }

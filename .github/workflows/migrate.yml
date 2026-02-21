@@ -1,0 +1,37 @@
+name: Migrate Production DB
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: Prisma Migrate Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Setup npm
+        run: npm install --global npm@11.4.2
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Run migrations
+        run: npx prisma migrate deploy --config prisma/prisma.config.ts
+        env:
+          DATABASE_URL: ${{ secrets.TIDB_DATABASE_URL }}

@@ -9,12 +9,30 @@ const adapter = new PrismaMariaDb(
   process.env.DATABASE_URL ?? 'mysql://user:password@localhost:3306/db',
 );
 
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
+function createPrismaClient() {
+  return new PrismaClient({
     adapter,
     log: ['error', 'warn'],
   });
+}
+
+const existingPrisma = globalForPrisma.prisma;
+const hasSystemAdministratorDelegate = Boolean(
+  existingPrisma &&
+  'systemAdministrator' in
+    (existingPrisma as unknown as Record<string, unknown>),
+);
+
+if (existingPrisma && !hasSystemAdministratorDelegate) {
+  if (typeof existingPrisma.$disconnect === 'function') {
+    void existingPrisma.$disconnect().catch(() => undefined);
+  }
+}
+
+export const prisma =
+  existingPrisma && hasSystemAdministratorDelegate
+    ? existingPrisma
+    : createPrismaClient();
 
 if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;

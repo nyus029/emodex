@@ -4,6 +4,10 @@ on:
   pull_request:
     branches:
       - develop
+      - main
+  push:
+    branches:
+      - develop
 
 permissions:
   contents: read
@@ -22,6 +26,9 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+
+      - name: Setup npm
+        run: npm install --global npm@11.4.2
 
       - name: Install dependencies
         run: npm ci
@@ -43,8 +50,60 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
+      - name: Setup npm
+        run: npm install --global npm@11.4.2
+
       - name: Install dependencies
         run: npm ci
 
       - name: Run format check
         run: npm run format:check
+
+  openapi:
+    name: OpenAPI
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Setup npm
+        run: npm install --global npm@11.4.2
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate OpenAPI
+        run: npm run openapi:validate
+
+  unit-test:
+    name: Unit Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Setup npm
+        run: npm install --global npm@11.4.2
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Run unit tests
+        run: npm test -- --runInBand

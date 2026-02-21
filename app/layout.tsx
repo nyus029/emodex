@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
+import LayoutShell from '@/components/layout-shell';
+
 export const metadata: Metadata = {
   applicationName: 'Emodex',
   title: 'Emodex',
@@ -12,7 +14,9 @@ export const metadata: Metadata = {
     title: 'Emodex',
   },
   icons: {
-    apple: '/apple-icon',
+    icon: '/icon.svg',
+    shortcut: '/icon.svg',
+    apple: '/icon.svg',
   },
 };
 
@@ -27,7 +31,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased bg-light-gray">
+        <LayoutShell>{children}</LayoutShell>
+      </body>
     </html>
   );
 }
