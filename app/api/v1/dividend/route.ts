@@ -2,11 +2,16 @@ import { prisma } from '@/lib/prisma';
 import { findUserAlbumsWithShared } from '@/lib/album-queries';
 import { calculatePhotoStorageEmo } from '@/lib/emo-value';
 import { requireAuth, jsonSuccess, roundEmo } from '@/lib/api-utils';
+import { getMockDividendSummary, isDbMockEnabled } from '@/lib/db-mock';
 
 export async function GET() {
   const auth = await requireAuth();
   if (auth.error) return auth.error;
   const { userId, userEmail } = auth.session;
+
+  if (isDbMockEnabled()) {
+    return jsonSuccess(getMockDividendSummary());
+  }
 
   const albums = await findUserAlbumsWithShared(
     userId,

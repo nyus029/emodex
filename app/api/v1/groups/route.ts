@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth0 } from '@/lib/auth0';
 import { prisma } from '@/lib/prisma';
+import { getMockGroups, isDbMockEnabled } from '@/lib/db-mock';
 
 export type MyGroup = {
   groupId: number;
@@ -9,6 +10,10 @@ export type MyGroup = {
 };
 
 export async function GET() {
+  if (isDbMockEnabled()) {
+    return NextResponse.json(getMockGroups(), { status: 200 });
+  }
+
   const session = await auth0.getSession();
   const userEmail = session?.user?.email as string | undefined;
   if (!session?.user?.sub) {

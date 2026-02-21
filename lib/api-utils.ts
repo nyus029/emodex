@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import type { z } from 'zod';
 import { auth0 } from '@/lib/auth0';
+import { DB_MOCK_SESSION, isDbMockEnabled } from '@/lib/db-mock';
 import { getSystemAdministratorAccessByEmail } from '@/lib/system-administrators';
 
 export type AuthSession = {
@@ -21,6 +22,10 @@ export async function requireAuth(): Promise<
   | { session: AuthSession; error?: never }
   | { session?: never; error: NextResponse }
 > {
+  if (isDbMockEnabled()) {
+    return { session: DB_MOCK_SESSION };
+  }
+
   const session = await auth0.getSession();
   const userId = session?.user?.sub;
   const userEmail = session?.user?.email as string | undefined;
@@ -41,6 +46,18 @@ export async function requireAdminAuth(): Promise<
     }
   | { currentUser?: never; error: NextResponse }
 > {
+  if (isDbMockEnabled()) {
+    return {
+      currentUser: {
+        id: 1,
+        email: DB_MOCK_SESSION.userEmail ?? 'mock-admin@example.com',
+        name: 'Mock Admin',
+      },
+      isRegisteredAdmin: true,
+      isBootstrapAdmin: true,
+    };
+  }
+
   const session = await auth0.getSession();
   const email = session?.user?.email;
 

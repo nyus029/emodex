@@ -9,6 +9,7 @@ import {
   jsonError,
 } from '@/lib/api-utils';
 import type { RouteContext } from '@/types/api';
+import { executeMockDividend, isDbMockEnabled } from '@/lib/db-mock';
 
 const dividendSchema = z.object({
   action: z.enum(['REINVEST', 'RECEIVE']),
@@ -24,6 +25,23 @@ export async function POST(
   const { userId, userEmail } = auth.session;
 
   const { id } = await context.params;
+  const rawBody = (await request.json().catch(() => null)) as unknown;
+  const parsed = parseBody(rawBody, dividendSchema);
+  if (parsed.error) return parsed.error;
+
+  if (isDbMockEnabled()) {
+    const mockResult = executeMockDividend({
+      albumId: id,
+      action: parsed.data.action,
+      photoStorageId: parsed.data.photoStorageId,
+    });
+
+    if ('error' in mockResult) {
+      return jsonError(mockResult.error, 400);
+    }
+
+    return jsonSuccess(mockResult.result);
+  }
 
   const album = await findAccessibleAlbum(id, userId, userEmail ?? '');
   if (!album) {
@@ -33,10 +51,6 @@ export async function POST(
   if (!album.plannedDividend || album.plannedDividend > new Date()) {
     return jsonError('Dividend date has not been reached yet', 400);
   }
-
-  const rawBody = (await request.json().catch(() => null)) as unknown;
-  const parsed = parseBody(rawBody, dividendSchema);
-  if (parsed.error) return parsed.error;
 
   const { action, photoStorageId } = parsed.data;
 

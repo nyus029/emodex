@@ -1,8 +1,13 @@
 import AdminFeature from '@/features/admin/AdminFeature';
 import { auth0 } from '@/lib/auth0';
 import { getSystemAdministratorAccessByEmail } from '@/lib/system-administrators';
+import { isDbMockEnabled } from '@/lib/db-mock';
 
 export default async function AdminPage() {
+  if (isDbMockEnabled()) {
+    return <AdminFeature />;
+  }
+
   const session = await auth0.getSession();
   const email = session?.user?.email;
 

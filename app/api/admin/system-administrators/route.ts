@@ -13,6 +13,7 @@ import {
   jsonSuccess,
   jsonError,
 } from '@/lib/api-utils';
+import { DB_MOCK_SESSION, isDbMockEnabled } from '@/lib/db-mock';
 
 const mutateSystemAdministratorSchema = z
   .object({
@@ -50,6 +51,29 @@ export async function GET() {
   const admin = await requireAdminAuth();
   if (admin.error) return admin.error;
 
+  if (isDbMockEnabled()) {
+    return jsonSuccess({
+      currentUser: {
+        id: admin.currentUser.id,
+        email: admin.currentUser.email,
+        isRegisteredAdmin: true,
+        isBootstrapAdmin: true,
+      },
+      systemAdministrators: [
+        {
+          id: 'mock-admin-1',
+          userId: 1,
+          userEmail: DB_MOCK_SESSION.userEmail ?? 'mock-admin@example.com',
+          userName: 'Mock Admin',
+          createdByUserId: 1,
+          createdByUserEmail:
+            DB_MOCK_SESSION.userEmail ?? 'mock-admin@example.com',
+          createdAt: new Date().toISOString(),
+        },
+      ],
+    });
+  }
+
   const administrators = await listSystemAdministrators();
 
   return jsonSuccess({
@@ -78,6 +102,23 @@ export async function POST(request: Request) {
   const rawBody = (await request.json().catch(() => null)) as unknown;
   const parsed = parseBody(rawBody, mutateSystemAdministratorSchema);
   if (parsed.error) return parsed.error;
+
+  if (isDbMockEnabled()) {
+    return jsonSuccess(
+      {
+        systemAdministrator: {
+          id: 'mock-admin-2',
+          userId: parsed.data.userId ?? 2,
+          userEmail: parsed.data.email ?? 'new-admin@example.com',
+          userName: 'Mock Added Admin',
+          createdByUserId: admin.currentUser.id,
+          createdByUserEmail: admin.currentUser.email,
+          createdAt: new Date().toISOString(),
+        },
+      },
+      201,
+    );
+  }
 
   const targetUserId = await resolveTargetUserId(parsed.data);
   if (!targetUserId) {
@@ -116,6 +157,10 @@ export async function DELETE(request: Request) {
   const rawBody = (await request.json().catch(() => null)) as unknown;
   const parsed = parseBody(rawBody, mutateSystemAdministratorSchema);
   if (parsed.error) return parsed.error;
+
+  if (isDbMockEnabled()) {
+    return jsonSuccess({ deletedUserId: parsed.data.userId ?? 1 });
+  }
 
   const targetUserId = await resolveTargetUserId(parsed.data);
   if (!targetUserId) {

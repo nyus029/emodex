@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { findAccessibleAlbum } from '@/lib/album-access';
 import { requireAuth, jsonSuccess, jsonError } from '@/lib/api-utils';
 import type { RouteContext } from '@/types/api';
+import { isDbMockEnabled } from '@/lib/db-mock';
 
 export async function GET(
   _request: Request,
@@ -12,6 +13,10 @@ export async function GET(
   const { userId, userEmail } = auth.session;
 
   const { eventId } = await context.params;
+
+  if (isDbMockEnabled()) {
+    return jsonError('Dividend event is not available in mock mode', 404);
+  }
 
   const event = await prisma.dividendEvent.findUnique({
     where: { id: eventId },

@@ -5,11 +5,16 @@ import {
   type StorageParams,
 } from '@/lib/emo-value';
 import { requireAuth, jsonSuccess, roundEmo } from '@/lib/api-utils';
+import { getMockInsightOverview, isDbMockEnabled } from '@/lib/db-mock';
 
 export async function GET() {
   const auth = await requireAuth();
   if (auth.error) return auth.error;
   const { userId, userEmail } = auth.session;
+
+  if (isDbMockEnabled()) {
+    return jsonSuccess(getMockInsightOverview());
+  }
 
   const ownAlbums = await prisma.album.findMany({
     where: { userId },

@@ -7,6 +7,7 @@ import {
 } from '@/lib/emo-value';
 import { requireAuth, jsonSuccess, jsonError, roundEmo } from '@/lib/api-utils';
 import type { RouteContext } from '@/types/api';
+import { getMockAlbumInsight, isDbMockEnabled } from '@/lib/db-mock';
 
 export async function GET(
   _request: Request,
@@ -17,6 +18,14 @@ export async function GET(
   const { userId, userEmail } = auth.session;
 
   const { id } = await context.params;
+
+  if (isDbMockEnabled()) {
+    const mockInsight = getMockAlbumInsight(id);
+    if (!mockInsight) {
+      return jsonError('Album not found', 404);
+    }
+    return jsonSuccess(mockInsight);
+  }
 
   const album = await findAccessibleAlbum(id, userId, userEmail ?? '');
   if (!album) {
