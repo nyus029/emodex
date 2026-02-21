@@ -801,7 +801,64 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '404':
-          description: Album not found
+          description: Album or photo storage not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Dividend already executed for this storage
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/dividend:
+    get:
+      tags:
+        - Dividend
+      summary: List pending and completed dividends
+      description: Returns pending (actionable) and completed dividend items for all accessible albums, grouped by photo storage.
+      responses:
+        '200':
+          description: Dividend list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DividendListResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/dividend/{eventId}:
+    get:
+      tags:
+        - Dividend
+      summary: Get dividend event detail
+      description: Returns dividend event details including the associated photo storage and its photos.
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          description: Dividend event identifier
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Dividend event detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DividendEventDetailResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Dividend event not found
           content:
             application/json:
               schema:
@@ -1445,6 +1502,9 @@ components:
           enum:
             - REINVEST
             - RECEIVE
+        photoStorageId:
+          type: string
+          description: Optional photo storage ID to target a single storage. When omitted, all active storages are processed.
     DividendActionResponse:
       type: object
       required:
@@ -1591,3 +1651,196 @@ components:
           example: 8500
         dayOverDayChange:
           $ref: '#/components/schemas/EmoValueChange'
+    DividendListResponse:
+      type: object
+      required:
+        - pending
+        - completed
+      properties:
+        pending:
+          type: array
+          items:
+            $ref: '#/components/schemas/PendingDividendItem'
+        completed:
+          type: array
+          items:
+            $ref: '#/components/schemas/CompletedDividendItem'
+    PendingDividendItem:
+      type: object
+      required:
+        - albumId
+        - albumName
+        - plannedDividend
+        - photoStorageId
+        - photoStorageName
+        - photoCount
+        - emoValue
+        - tags
+      properties:
+        albumId:
+          type: string
+          example: abc123
+        albumName:
+          type: string
+          example: 家族アルバム
+        plannedDividend:
+          type: string
+          format: date-time
+          example: '2026-03-31T00:00:00.000Z'
+        photoStorageId:
+          type: string
+          example: ps_123
+        photoStorageName:
+          type: string
+          example: 2026-02-旅行
+        photoCount:
+          type: integer
+          example: 8
+        emoValue:
+          type: number
+          example: 1500.5
+        tags:
+          type: array
+          items:
+            type: string
+          example:
+            - 旅行
+            - 家族
+    CompletedDividendItem:
+      type: object
+      required:
+        - dividendEventId
+        - albumId
+        - albumName
+        - photoStorageId
+        - photoStorageName
+        - action
+        - emoValueAtEvent
+        - executedAt
+      properties:
+        dividendEventId:
+          type: string
+          example: evt_123
+        albumId:
+          type: string
+          example: abc123
+        albumName:
+          type: string
+          example: 家族アルバム
+        photoStorageId:
+          type: string
+          example: ps_123
+        photoStorageName:
+          type: string
+          example: 2026-02-旅行
+        action:
+          type: string
+          enum:
+            - REINVEST
+            - RECEIVE
+        emoValueAtEvent:
+          type: number
+          example: 1500.5
+        executedAt:
+          type: string
+          format: date-time
+          example: '2026-03-31T12:00:00.000Z'
+    DividendEventDetailResponse:
+      type: object
+      required:
+        - dividendEvent
+        - album
+        - photoStorage
+      properties:
+        dividendEvent:
+          type: object
+          required:
+            - id
+            - action
+            - emoValueAtEvent
+            - previousBaseEmo
+            - newBaseEmo
+            - executedAt
+          properties:
+            id:
+              type: string
+              example: evt_123
+            action:
+              type: string
+              enum:
+                - REINVEST
+                - RECEIVE
+            emoValueAtEvent:
+              type: number
+              example: 1500.5
+            previousBaseEmo:
+              type: integer
+              example: 100
+            newBaseEmo:
+              type: integer
+              example: 200
+            executedAt:
+              type: string
+              format: date-time
+              example: '2026-03-31T12:00:00.000Z'
+        album:
+          type: object
+          required:
+            - id
+            - name
+          properties:
+            id:
+              type: string
+              example: abc123
+            name:
+              type: string
+              example: 家族アルバム
+        photoStorage:
+          type: object
+          required:
+            - id
+            - name
+            - photoCount
+            - tags
+            - photos
+          properties:
+            id:
+              type: string
+              example: ps_123
+            name:
+              type: string
+              example: 2026-02-旅行
+            photoCount:
+              type: integer
+              example: 8
+            tags:
+              type: array
+              items:
+                type: string
+              example:
+                - 旅行
+                - 家族
+            photos:
+              type: array
+              items:
+                type: object
+                required:
+                  - id
+                  - fileName
+                  - blobUrl
+                properties:
+                  id:
+                    type: string
+                    example: psp_123
+                  fileName:
+                    type: string
+                    example: IMG_0001.JPG
+                  blobUrl:
+                    type: string
+                    format: uri
+                    example: https://example.public.blob.vercel-storage.com/xxx.jpg
+                  contentType:
+                    type:
+                      - string
+                      - 'null'
+                    example: image/jpeg
