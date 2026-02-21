@@ -9,15 +9,17 @@ export default function PhotoPicker({
 }: PhotoPickerProps) {
   return (
     <div className="grid gap-2">
-      <label className="grid gap-1">
-        <span className="text-sm">画像ファイル（複数選択可）</span>
+      <label className="grid gap-2">
+        <span className="text-sm font-semibold text-gray-600">
+          画像ファイル（複数選択可）
+        </span>
         <input
           required
           type="file"
           multiple
           accept="image/*"
           onChange={(e) => onFilesChange(Array.from(e.target.files ?? []))}
-          className="rounded border px-3 py-2"
+          className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm"
         />
       </label>
       {files.length > 0 && (
@@ -25,7 +27,7 @@ export default function PhotoPicker({
           {files.map((file, i) => (
             <div
               key={`${file.name}-${i}`}
-              className="relative aspect-square overflow-hidden rounded border"
+              className="relative aspect-square overflow-hidden rounded-xl"
             >
               {/* eslint-disable-next-line @next/next/no-img-element -- blob URL preview for local files */}
               <img
@@ -37,9 +39,7 @@ export default function PhotoPicker({
           ))}
         </div>
       )}
-      <p className="text-xs text-zinc-600 dark:text-zinc-300">
-        選択中: {files.length} 件
-      </p>
+      <p className="text-xs text-gray-500">選択中: {files.length} 件</p>
     </div>
   );
 }

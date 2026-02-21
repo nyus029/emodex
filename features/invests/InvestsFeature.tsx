@@ -1,7 +1,6 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
 import { upload } from '@vercel/blob/client';
 import EmoTypeSelector from '@/components/invests/EmoTypeSelector';
 import GroupSelector from '@/components/invests/GroupSelector';
@@ -243,78 +242,90 @@ export default function InvestsFeature() {
   const showAlbumStep = emoType === 'PRIVATE' || isSharedReady;
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-6 px-4 py-6 sm:px-6 sm:py-10 pb-24">
-      <div>
-        <Link
-          href="/"
-          className="text-sm underline hover:text-zinc-600 dark:hover:text-zinc-300"
-        >
-          ホームへ戻る
-        </Link>
-      </div>
+    <div className="min-h-screen bg-background-light p-5">
+      <form onSubmit={onSubmit}>
+        <div className="mx-auto max-w-md space-y-4 pb-24">
+          {/* ページヘッダーカード */}
+          <div className="rounded-xl bg-white px-5 py-4 shadow-card">
+            <h1 className="text-[15px] font-medium text-gray-900">
+              フォトストレージ積み立て
+            </h1>
+            <p className="mt-1 text-[13px] text-gray-500">
+              エモタイプとアルバムを選んで写真をアップロードします。
+            </p>
+          </div>
 
-      <h1 className="text-2xl font-bold">フォトストレージ積み立て</h1>
-      <p className="text-sm text-zinc-600 dark:text-zinc-300">
-        エモタイプとアルバムを選んで写真をアップロードします。
-      </p>
+          {/* Step 1: エモタイプ選択 */}
+          <div className="rounded-xl bg-white px-4 py-4 shadow-card">
+            <EmoTypeSelector value={emoType} onChange={handleEmoTypeChange} />
+          </div>
 
-      <form onSubmit={onSubmit} className="grid gap-4 rounded border p-4">
-        {/* Step 1: エモタイプ選択 */}
-        <EmoTypeSelector value={emoType} onChange={handleEmoTypeChange} />
+          {/* Step 1b: グループ選択 */}
+          {emoType === 'SHARED' && (
+            <div className="rounded-xl bg-white px-4 py-4 shadow-card">
+              <GroupSelector
+                groups={groups}
+                selectedGroupId={selectedGroupId}
+                onSelect={handleGroupChange}
+              />
+            </div>
+          )}
 
-        {emoType === 'SHARED' && (
-          <GroupSelector
-            groups={groups}
-            selectedGroupId={selectedGroupId}
-            onSelect={handleGroupChange}
-          />
-        )}
+          {/* Step 2: アルバム選択 or 作成 */}
+          {showAlbumStep && (
+            <div className="rounded-xl bg-white px-4 py-4 shadow-card">
+              <AlbumSelector
+                albums={filteredAlbums}
+                selectedAlbumId={selectedAlbumId}
+                isCreating={isAlbumCreating}
+                onSelect={setSelectedAlbumId}
+                onCreate={handleCreateAlbum}
+              />
+            </div>
+          )}
 
-        {/* Step 2: アルバム選択 or 作成 */}
-        {showAlbumStep && (
-          <AlbumSelector
-            albums={filteredAlbums}
-            selectedAlbumId={selectedAlbumId}
-            isCreating={isAlbumCreating}
-            onSelect={setSelectedAlbumId}
-            onCreate={handleCreateAlbum}
-          />
-        )}
+          {/* Step 3: 写真 + タグ + アップロード */}
+          {selectedAlbumId && (
+            <div className="space-y-4 rounded-xl bg-white px-4 py-4 shadow-card">
+              <PhotoPicker files={photoFiles} onFilesChange={setPhotoFiles} />
 
-        {/* Step 3: 写真 + タグ + アップロード */}
-        {selectedAlbumId && (
-          <>
-            <PhotoPicker files={photoFiles} onFilesChange={setPhotoFiles} />
+              <TagInput
+                tags={tags}
+                suggestions={selectedAlbum?.createdTags ?? []}
+                onTagsChange={setTags}
+              />
 
-            <TagInput
-              tags={tags}
-              suggestions={selectedAlbum?.createdTags ?? []}
-              onTagsChange={setTags}
-            />
+              {isUploading && uploadProgress > 0 && (
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
+                  <div
+                    className="h-full bg-green transition-all"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+              )}
 
-            {isUploading && uploadProgress > 0 && (
-              <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
-                <div
-                  className="h-full bg-black transition-all dark:bg-white"
-                  style={{ width: `${uploadProgress}%` }}
-                />
-              </div>
-            )}
+              <InvestResult message={message} isError={isError} />
 
-            <button
-              type="submit"
-              disabled={isUploading || photoFiles.length === 0}
-              className="rounded bg-black px-4 py-2 text-white disabled:opacity-50"
-            >
-              {isUploading
-                ? `アップロード中... (${uploadProgress}%)`
-                : '積み立てる'}
-            </button>
-          </>
-        )}
+              <button
+                type="submit"
+                disabled={isUploading || photoFiles.length === 0}
+                className="w-full rounded-xl bg-green py-3 text-sm font-medium text-white disabled:opacity-50"
+              >
+                {isUploading
+                  ? `アップロード中... (${uploadProgress}%)`
+                  : '積み立てる'}
+              </button>
+            </div>
+          )}
 
-        <InvestResult message={message} isError={isError} />
+          {/* アルバム未選択時のメッセージ */}
+          {!selectedAlbumId && message && (
+            <div className="rounded-xl bg-white px-4 py-3 shadow-card">
+              <InvestResult message={message} isError={isError} />
+            </div>
+          )}
+        </div>
       </form>
-    </main>
+    </div>
   );
 }
