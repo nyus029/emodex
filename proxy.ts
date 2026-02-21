@@ -2,13 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { auth0 } from './lib/auth0';
 
-const isProduction = process.env.VERCEL_ENV === 'production';
-const isPreReleaseLocked = process.env.PRE_RELEASE_LOCK !== 'false';
-
 export async function proxy(request: Request) {
-  if (isProduction && isPreReleaseLocked) {
-    return new NextResponse('Forbidden', { status: 403 });
-  }
   const authResponse = await auth0.middleware(request);
   const { pathname, search } = new URL(request.url);
 
@@ -32,6 +26,6 @@ export async function proxy(request: Request) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|_next/data|favicon.ico|icon|apple-icon|manifest.webmanifest|sw\\.js|sitemap.xml|robots.txt).*)',
+    '/((?!_next/static|_next/image|_next/data|favicon.ico|icon|apple-icon|manifest.webmanifest|sw\\.js|push-sw\\.js|sitemap.xml|robots.txt|api/cron|api/health|api/docs).*)',
   ],
 };
