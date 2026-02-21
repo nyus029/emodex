@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { sendDividendReceivedNotification } from '@/lib/dividend-notification';
 
 interface DividendActionPanelProps {
   albumId: string;
@@ -53,11 +54,22 @@ export default function DividendActionPanel({
         );
       }
       const body = (await res.json().catch(() => null)) as {
-        events?: Array<{ id: string }>;
+        events?: Array<{ id: string; photoStorageName?: string }>;
       } | null;
       setConfirming(null);
-      if (action === 'RECEIVE' && body?.events?.length && onReceiveSuccess) {
-        onReceiveSuccess(body.events.map((e) => e.id));
+      if (action === 'RECEIVE' && body?.events?.length) {
+        for (const ev of body.events) {
+          if (ev.photoStorageName) {
+            sendDividendReceivedNotification(ev.photoStorageName, ev.id).catch(
+              () => {},
+            );
+          }
+        }
+        if (onReceiveSuccess) {
+          onReceiveSuccess(body.events.map((e) => e.id));
+        } else {
+          onComplete();
+        }
       } else {
         onComplete();
       }

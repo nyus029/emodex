@@ -10,6 +10,8 @@ import {
 } from '@/lib/api-utils';
 import type { RouteContext } from '@/types/api';
 
+const RECEIVE_COOLDOWN_DAYS = 7;
+
 const dividendSchema = z.object({
   action: z.enum(['REINVEST', 'RECEIVE']),
   photoStorageId: z.string().optional(),
@@ -40,20 +42,32 @@ export async function POST(
 
   if (photoStorageId) {
     const storage = await prisma.photoStorage.findFirst({
-      where: { id: photoStorageId, albumId: id, isCompoundActive: true },
+      where: {
+        id: photoStorageId,
+        albumId: id,
+        ...(action === 'RECEIVE' ? { isCompoundActive: true } : {}),
+      },
     });
     if (!storage) {
       return jsonError('Photo storage not found or not active', 404);
     }
 
-    const existingEvent = await prisma.dividendEvent.findFirst({
-      where: {
-        photoStorageId,
-        action: 'RECEIVE',
-      },
-    });
-    if (existingEvent) {
-      return jsonError('Dividend already executed for this storage', 409);
+    if (action === 'RECEIVE') {
+      const cooldownSince = new Date();
+      cooldownSince.setDate(cooldownSince.getDate() - RECEIVE_COOLDOWN_DAYS);
+      const recentReceive = await prisma.dividendEvent.findFirst({
+        where: {
+          photoStorageId,
+          action: 'RECEIVE',
+          executedAt: { gte: cooldownSince },
+        },
+      });
+      if (recentReceive) {
+        return jsonError(
+          'This storage received a dividend recently. Please wait 7 days.',
+          409,
+        );
+      }
     }
 
     activeStorages = [storage];
@@ -68,15 +82,40 @@ export async function POST(
   }
 
   const result = await prisma.$transaction(async (tx) => {
-    const events = [];
+    const events: Array<{
+      event: Awaited<ReturnType<typeof tx.dividendEvent.create>>;
+      storageName: string;
+    }> = [];
 
     for (const storage of activeStorages) {
-      const emoValue = calculatePhotoStorageEmo({
-        photoCount: storage.photoCount,
-        baseEmoPerPhoto: storage.baseEmoPerPhoto,
-        compoundStartDate: storage.compoundStartDate,
-        isCompoundActive: true,
-      });
+      if (action === 'RECEIVE') {
+        const cooldownSince = new Date();
+        cooldownSince.setDate(cooldownSince.getDate() - RECEIVE_COOLDOWN_DAYS);
+        const recentReceive = await tx.dividendEvent.findFirst({
+          where: {
+            photoStorageId: storage.id,
+            action: 'RECEIVE',
+            executedAt: { gte: cooldownSince },
+          },
+        });
+        if (recentReceive) continue;
+      }
+
+      let emoValue: number;
+      if (action === 'REINVEST' && !storage.isCompoundActive) {
+        const lastReceive = await tx.dividendEvent.findFirst({
+          where: { photoStorageId: storage.id, action: 'RECEIVE' },
+          orderBy: { executedAt: 'desc' },
+        });
+        emoValue = lastReceive?.emoValueAtEvent ?? 0;
+      } else {
+        emoValue = calculatePhotoStorageEmo({
+          photoCount: storage.photoCount,
+          baseEmoPerPhoto: storage.baseEmoPerPhoto,
+          compoundStartDate: storage.compoundStartDate,
+          isCompoundActive: true,
+        });
+      }
 
       const previousBaseEmo = storage.baseEmoPerPhoto;
 
@@ -87,6 +126,7 @@ export async function POST(
           data: {
             baseEmoPerPhoto: newBaseEmo,
             compoundStartDate: new Date(),
+            isCompoundActive: true,
           },
         });
 
@@ -100,7 +140,7 @@ export async function POST(
             newBaseEmo,
           },
         });
-        events.push(event);
+        events.push({ event, storageName: storage.name });
       } else {
         await tx.photoStorage.update({
           where: { id: storage.id },
@@ -117,7 +157,7 @@ export async function POST(
             newBaseEmo: 0,
           },
         });
-        events.push(event);
+        events.push({ event, storageName: storage.name });
       }
     }
 
@@ -127,9 +167,10 @@ export async function POST(
   return jsonSuccess({
     action,
     processedStorages: result.length,
-    events: result.map((e) => ({
+    events: result.map(({ event: e, storageName }) => ({
       id: e.id,
       photoStorageId: e.photoStorageId,
+      photoStorageName: storageName,
       emoValueAtEvent: e.emoValueAtEvent,
       previousBaseEmo: e.previousBaseEmo,
       newBaseEmo: e.newBaseEmo,

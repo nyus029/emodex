@@ -24,7 +24,10 @@ interface DividendDetailData {
     id: string;
     name: string;
     photoCount: number;
+    isCompoundActive: boolean;
     tags: string[];
+    photosVisible: boolean;
+    photosExpireAt: string | null;
     photos: Photo[];
   };
 }
@@ -39,6 +42,9 @@ export default function DividendDetailFeature({
   const [data, setData] = useState<DividendDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reinvestSubmitting, setReinvestSubmitting] = useState(false);
+  const [reinvestDone, setReinvestDone] = useState(false);
+  const [reinvestError, setReinvestError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -58,6 +64,39 @@ export default function DividendDetailFeature({
     fetchData();
   }, [fetchData]);
 
+  async function handleReinvest() {
+    if (!data) return;
+    if (
+      !window.confirm(
+        '配当を再投資しますか？ 基準価格が2倍になり、複利が再スタートします。',
+      )
+    )
+      return;
+    setReinvestSubmitting(true);
+    setReinvestError(null);
+    try {
+      const res = await fetch(`/api/v1/albums/${data.album.id}/dividend`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'REINVEST',
+          photoStorageId: data.photoStorage.id,
+        }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        throw new Error(body.error ?? '再投資に失敗しました');
+      }
+      setReinvestDone(true);
+    } catch (e) {
+      setReinvestError(e instanceof Error ? e.message : '再投資に失敗しました');
+    } finally {
+      setReinvestSubmitting(false);
+    }
+  }
+
   if (error && !data) {
     return (
       <div className="min-h-screen bg-background-light p-5">
@@ -68,7 +107,8 @@ export default function DividendDetailFeature({
     );
   }
 
-  const photos = data?.photoStorage.photos ?? [];
+  const photosVisible = data?.photoStorage.photosVisible ?? false;
+  const photos = photosVisible ? (data?.photoStorage.photos ?? []) : [];
   const photoSlots = Array.from({ length: 9 }).map(
     (_, index) => photos[index] ?? null,
   );
@@ -148,26 +188,72 @@ export default function DividendDetailFeature({
               </div>
             </div>
 
-            <section className="grid grid-cols-3 gap-2">
-              {photoSlots.map((photo, index) => (
-                <div
-                  key={photo?.id ?? `placeholder-${index}`}
-                  className="relative aspect-square"
-                >
-                  {photo ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={photo.blobUrl}
-                      alt={photo.fileName}
-                      className="h-full w-full rounded-xl object-cover"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="h-full w-full rounded-xl bg-white shadow-card" />
+            {photosVisible ? (
+              <>
+                {data.photoStorage.photosExpireAt && (
+                  <p className="px-1 text-xs text-gray-500">
+                    写真の閲覧期限:{' '}
+                    {new Date(
+                      data.photoStorage.photosExpireAt,
+                    ).toLocaleDateString('ja-JP')}
+                  </p>
+                )}
+                <section className="grid grid-cols-3 gap-2">
+                  {photoSlots.map((photo, index) => (
+                    <div
+                      key={photo?.id ?? `placeholder-${index}`}
+                      className="relative aspect-square"
+                    >
+                      {photo ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={photo.blobUrl}
+                          alt={photo.fileName}
+                          className="h-full w-full rounded-xl object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="h-full w-full rounded-xl bg-white shadow-card" />
+                      )}
+                    </div>
+                  ))}
+                </section>
+              </>
+            ) : (
+              <div className="rounded-xl bg-white px-4 py-6 shadow-card text-center">
+                <p className="text-sm text-gray-500">
+                  {data.dividendEvent.action === 'REINVEST'
+                    ? '再投資済みのため写真は表示できません'
+                    : '閲覧期限が過ぎたため写真は表示できません'}
+                </p>
+              </div>
+            )}
+
+            {data.dividendEvent.action === 'RECEIVE' &&
+              !data.photoStorage.isCompoundActive &&
+              !reinvestDone && (
+                <div className="rounded-xl bg-white px-4 py-4 shadow-card">
+                  <button
+                    type="button"
+                    onClick={handleReinvest}
+                    disabled={reinvestSubmitting}
+                    className="w-full rounded-lg bg-green px-4 py-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {reinvestSubmitting ? '処理中...' : '再投資する'}
+                  </button>
+                  {reinvestError && (
+                    <p className="mt-2 text-xs text-red-600">{reinvestError}</p>
                   )}
                 </div>
-              ))}
-            </section>
+              )}
+
+            {reinvestDone && (
+              <div className="rounded-xl bg-green/10 px-4 py-4 shadow-card text-center">
+                <p className="text-sm font-medium text-green">
+                  再投資が完了しました
+                </p>
+              </div>
+            )}
           </div>
         ) : null}
       </div>

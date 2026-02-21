@@ -957,6 +957,35 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/cron/expired-photos:
+    get:
+      tags:
+        - Cron
+      summary: Delete expired photo blobs
+      description: Deletes Vercel Blob files for RECEIVE events older than 7 days where storage is still inactive. Protected by CRON_SECRET.
+      responses:
+        '200':
+          description: Expired photos cleaned up
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  storagesProcessed:
+                    type: integer
+                    example: 5
+                  blobsDeleted:
+                    type: integer
+                    example: 42
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/groups:
     get:
       tags:
@@ -1645,6 +1674,7 @@ components:
             required:
               - id
               - photoStorageId
+              - photoStorageName
               - emoValueAtEvent
               - previousBaseEmo
               - newBaseEmo
@@ -1655,6 +1685,9 @@ components:
               photoStorageId:
                 type: string
                 example: ps_123
+              photoStorageName:
+                type: string
+                example: '20260222120000'
               emoValueAtEvent:
                 type: number
                 example: 1500.5
@@ -1980,7 +2013,10 @@ components:
             - id
             - name
             - photoCount
+            - isCompoundActive
             - tags
+            - photosVisible
+            - photosExpireAt
             - photos
           properties:
             id:
@@ -1992,6 +2028,9 @@ components:
             photoCount:
               type: integer
               example: 8
+            isCompoundActive:
+              type: boolean
+              example: false
             tags:
               type: array
               items:
@@ -1999,6 +2038,17 @@ components:
               example:
                 - 旅行
                 - 家族
+            photosVisible:
+              type: boolean
+              description: Whether photos are currently viewable (RECEIVE within 7 days and not reinvested)
+              example: true
+            photosExpireAt:
+              type:
+                - string
+                - 'null'
+              format: date-time
+              description: When photo viewing expires (7 days after RECEIVE). Null for REINVEST events.
+              example: '2026-04-07T12:00:00.000Z'
             photos:
               type: array
               items:

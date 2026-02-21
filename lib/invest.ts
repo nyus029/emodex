@@ -11,3 +11,12 @@ export function generateStorageName(): string {
     pad(now.getSeconds()),
   ].join('');
 }
+
+export function parseStorageNameToJapaneseDate(
+  storageName: string,
+): string | null {
+  const match = storageName.match(/^(\d{4})(\d{2})(\d{2})\d{6}$/);
+  if (!match) return null;
+  const [, year, month, day] = match;
+  return `${year}年${parseInt(month!, 10)}月${parseInt(day!, 10)}日`;
+}

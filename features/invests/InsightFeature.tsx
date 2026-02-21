@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import EmoChart, { type ChartDataPoint } from '@/components/invests/EmoChart';
 import PeriodTabs, { type Period } from '@/components/invests/PeriodTabs';
 import DividendActionPanel from '@/components/invests/DividendActionPanel';
+import { sendDividendReceivedNotification } from '@/lib/dividend-notification';
 
 interface PhotoStorageSummary {
   id: string;
@@ -119,9 +120,16 @@ export default function InsightFeature({ albumId }: InsightFeatureProps) {
         throw new Error(body.error ?? '配当の受取に失敗しました');
       }
       const body = (await res.json().catch(() => null)) as {
-        events?: Array<{ id: string }>;
+        events?: Array<{ id: string; photoStorageName?: string }>;
       } | null;
       if (body?.events?.length) {
+        for (const ev of body.events) {
+          if (ev.photoStorageName) {
+            sendDividendReceivedNotification(ev.photoStorageName, ev.id).catch(
+              () => {},
+            );
+          }
+        }
         await fetchInsight();
         handleReceiveSuccess(body.events.map((e) => e.id));
       } else {
@@ -156,9 +164,16 @@ export default function InsightFeature({ albumId }: InsightFeatureProps) {
         throw new Error(body.error ?? '配当の受取に失敗しました');
       }
       const body = (await res.json().catch(() => null)) as {
-        events?: Array<{ id: string }>;
+        events?: Array<{ id: string; photoStorageName?: string }>;
       } | null;
       if (body?.events?.length) {
+        for (const ev of body.events) {
+          if (ev.photoStorageName) {
+            sendDividendReceivedNotification(ev.photoStorageName, ev.id).catch(
+              () => {},
+            );
+          }
+        }
         await fetchInsight();
         handleReceiveSuccess(body.events.map((e) => e.id));
       } else {

@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { useState } from 'react';
+import { sendDividendReceivedNotification } from '@/lib/dividend-notification';
 
 interface PendingDividendItemProps {
   albumId: string;
@@ -49,6 +50,21 @@ export default function PendingDividendItem({
         throw new Error(
           (body as { error?: string }).error ?? 'Failed to execute dividend',
         );
+      }
+      if (action === 'RECEIVE') {
+        const body = (await res.json().catch(() => null)) as {
+          events?: Array<{ id: string; photoStorageName?: string }>;
+        } | null;
+        if (body?.events) {
+          for (const ev of body.events) {
+            if (ev.photoStorageName) {
+              sendDividendReceivedNotification(
+                ev.photoStorageName,
+                ev.id,
+              ).catch(() => {});
+            }
+          }
+        }
       }
       setConfirming(null);
       onComplete();
