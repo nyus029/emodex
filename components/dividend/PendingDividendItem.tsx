@@ -1,10 +1,12 @@
 'use client';
 
+import Image from 'next/image';
 import { useState } from 'react';
 
 interface PendingDividendItemProps {
   albumId: string;
   albumName: string;
+  plannedDividend: string;
   photoStorageId: string;
   photoStorageName: string;
   photoCount: number;
@@ -16,6 +18,7 @@ interface PendingDividendItemProps {
 export default function PendingDividendItem({
   albumId,
   albumName,
+  plannedDividend,
   photoStorageId,
   photoStorageName,
   photoCount,
@@ -28,6 +31,9 @@ export default function PendingDividendItem({
   );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const formattedPlannedDividend = new Date(plannedDividend).toLocaleDateString(
+    'ja-JP',
+  );
 
   async function handleAction(action: 'REINVEST' | 'RECEIVE') {
     setSubmitting(true);
@@ -55,12 +61,14 @@ export default function PendingDividendItem({
 
   if (confirming) {
     return (
-      <div className="grid gap-3 rounded-lg border border-yellow-300 bg-yellow-50 p-4 dark:border-yellow-700 dark:bg-yellow-900/20">
+      <div className="grid gap-3 rounded-xl bg-white px-4 py-3 shadow-card">
         <div className="grid gap-1">
-          <p className="text-xs text-zinc-500">{albumName}</p>
-          <p className="font-medium">{photoStorageName}</p>
+          <p className="text-xs text-gray-500">{albumName}</p>
+          <p className="text-[15px] font-medium text-gray-900">
+            {photoStorageName}
+          </p>
         </div>
-        <p className="text-sm">
+        <p className="text-sm text-gray-800">
           {confirming === 'REINVEST'
             ? '配当再投資を実行しますか？ 基準価格が2倍になり、複利が再スタートします。'
             : `配当受取を実行しますか？ エモ価 ${Math.round(emoValue).toLocaleString()} emo を受け取り、複利が停止します。`}
@@ -70,7 +78,7 @@ export default function PendingDividendItem({
           <button
             onClick={() => handleAction(confirming)}
             disabled={submitting}
-            className="rounded bg-black px-4 py-2 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-black"
+            className="rounded-lg bg-black px-4 py-2 text-sm text-white disabled:opacity-50"
           >
             {submitting ? '処理中...' : '実行する'}
           </button>
@@ -80,7 +88,7 @@ export default function PendingDividendItem({
               setError(null);
             }}
             disabled={submitting}
-            className="rounded border px-4 py-2 text-sm disabled:opacity-50"
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 disabled:opacity-50"
           >
             キャンセル
           </button>
@@ -90,40 +98,62 @@ export default function PendingDividendItem({
   }
 
   return (
-    <div className="grid gap-3 rounded-lg border border-green-300 bg-green-50 p-4 dark:border-green-700 dark:bg-green-900/20">
-      <div className="flex items-start justify-between">
-        <div className="grid gap-1">
-          <p className="text-xs text-zinc-500">{albumName}</p>
-          <p className="font-medium">{photoStorageName}</p>
-          <div className="flex gap-1">
-            {tags.map((tag) => (
-              <span
-                key={tag}
-                className="rounded bg-zinc-100 px-1.5 py-0.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
-              >
-                {tag}
-              </span>
-            ))}
+    <div className="grid gap-3 rounded-xl bg-white px-4 py-3 shadow-card">
+      <div className="flex items-center gap-4">
+        <Image
+          src="/mockphoto.png"
+          alt="thumbnail"
+          width={64}
+          height={64}
+          className="h-16 w-16 shrink-0 rounded-xl object-cover"
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <Image
+              src="/users.svg"
+              alt="user"
+              width={20}
+              height={20}
+              className="shrink-0"
+            />
+            <p className="truncate text-[15px] font-medium text-gray-900">
+              {albumName}
+            </p>
+          </div>
+          <div className="mt-1 space-y-1 text-[13px] text-gray-800">
+            <div className="flex gap-3">
+              <span className="w-12 text-gray-500">配当日</span>
+              <span className="tabular-nums">{formattedPlannedDividend}</span>
+            </div>
+            <div className="flex gap-3">
+              <span className="w-12 text-gray-500">期限</span>
+              <span className="truncate text-gray-700">{photoStorageName}</span>
+            </div>
           </div>
         </div>
-        <div className="grid gap-0.5 text-right">
-          <span className="font-medium">
-            {Math.round(emoValue).toLocaleString()}{' '}
-            <span className="text-xs font-normal text-zinc-500">emo</span>
-          </span>
-          <span className="text-xs text-zinc-500">{photoCount} 枚</span>
-        </div>
       </div>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+        <span>{photoCount} 枚</span>
+        <span>{Math.round(emoValue).toLocaleString()} emo</span>
+        {tags.map((tag) => (
+          <span
+            key={tag}
+            className="rounded bg-gray-100 px-1.5 py-0.5 text-gray-600"
+          >
+            {tag}
+          </span>
+        ))}
+      </div>
+      <div className="flex gap-2 pt-1">
         <button
           onClick={() => setConfirming('REINVEST')}
-          className="rounded bg-black px-4 py-2 text-sm text-white dark:bg-white dark:text-black"
+          className="rounded-lg bg-black px-4 py-2 text-sm text-white"
         >
           再投資する
         </button>
         <button
           onClick={() => setConfirming('RECEIVE')}
-          className="rounded border px-4 py-2 text-sm"
+          className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700"
         >
           受け取る
         </button>

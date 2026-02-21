@@ -56,73 +56,80 @@ export default function DividendListFeature() {
 
   if (error && !data) {
     return (
-      <div className="mx-auto max-w-3xl p-4">
-        <p className="text-sm text-red-600">{error}</p>
+      <div className="min-h-screen bg-background-light p-5">
+        <div className="mx-auto max-w-md rounded-xl bg-white px-4 py-3 shadow-card">
+          <p className="text-sm text-red-600">{error}</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto grid max-w-3xl gap-6 p-4 pb-24">
-      {/* Pending Section */}
-      <section className="grid gap-3">
-        <h2 className="text-lg font-bold">未開封の配当</h2>
-        {loading ? (
-          Array.from({ length: 2 }).map((_, i) => (
-            <div
-              key={i}
-              className="h-32 animate-pulse rounded-lg bg-zinc-200 dark:bg-zinc-700"
-            />
-          ))
-        ) : data && data.pending.length > 0 ? (
-          data.pending.map((item) => (
-            <PendingDividendItem
-              key={item.photoStorageId}
-              albumId={item.albumId}
-              albumName={item.albumName}
-              photoStorageId={item.photoStorageId}
-              photoStorageName={item.photoStorageName}
-              photoCount={item.photoCount}
-              emoValue={item.emoValue}
-              tags={item.tags}
-              onComplete={fetchData}
-            />
-          ))
-        ) : (
-          <div className="rounded-lg border border-dashed p-8 text-center text-sm text-zinc-500">
-            未開封の配当はありません
-          </div>
-        )}
-      </section>
+    <div className="min-h-screen bg-background-light p-5">
+      <div className="mx-auto grid max-w-md gap-4 pb-24">
+        <section className="grid gap-3">
+          <h2 className="px-1 text-sm font-semibold text-gray-600">
+            未開封の配当
+          </h2>
+          {loading ? (
+            Array.from({ length: 2 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-28 animate-pulse rounded-xl bg-white shadow-card"
+              />
+            ))
+          ) : data && data.pending.length > 0 ? (
+            data.pending.map((item) => (
+              <PendingDividendItem
+                key={item.photoStorageId}
+                albumId={item.albumId}
+                albumName={item.albumName}
+                plannedDividend={item.plannedDividend}
+                photoStorageId={item.photoStorageId}
+                photoStorageName={item.photoStorageName}
+                photoCount={item.photoCount}
+                emoValue={item.emoValue}
+                tags={item.tags}
+                onComplete={fetchData}
+              />
+            ))
+          ) : (
+            <div className="rounded-xl bg-white p-8 text-center text-sm text-gray-500 shadow-card">
+              未開封の配当はありません
+            </div>
+          )}
+        </section>
 
-      {/* Completed Section */}
-      <section className="grid gap-3">
-        <h2 className="text-lg font-bold">開封済みの配当</h2>
-        {loading ? (
-          Array.from({ length: 3 }).map((_, i) => (
-            <div
-              key={i}
-              className="h-20 animate-pulse rounded-lg bg-zinc-200 dark:bg-zinc-700"
-            />
-          ))
-        ) : data && data.completed.length > 0 ? (
-          data.completed.map((item) => (
-            <CompletedDividendItem
-              key={item.dividendEventId}
-              dividendEventId={item.dividendEventId}
-              albumName={item.albumName}
-              photoStorageName={item.photoStorageName}
-              action={item.action}
-              emoValueAtEvent={item.emoValueAtEvent}
-              executedAt={item.executedAt}
-            />
-          ))
-        ) : (
-          <div className="rounded-lg border border-dashed p-8 text-center text-sm text-zinc-500">
-            開封済みの配当はありません
-          </div>
-        )}
-      </section>
+        <section className="grid gap-3">
+          <h2 className="px-1 text-sm font-semibold text-gray-600">
+            開封済みの配当
+          </h2>
+          {loading ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-24 animate-pulse rounded-xl bg-white shadow-card"
+              />
+            ))
+          ) : data && data.completed.length > 0 ? (
+            data.completed.map((item) => (
+              <CompletedDividendItem
+                key={item.dividendEventId}
+                dividendEventId={item.dividendEventId}
+                albumName={item.albumName}
+                photoStorageName={item.photoStorageName}
+                action={item.action}
+                emoValueAtEvent={item.emoValueAtEvent}
+                executedAt={item.executedAt}
+              />
+            ))
+          ) : (
+            <div className="rounded-xl bg-white p-8 text-center text-sm text-gray-500 shadow-card">
+              開封済みの配当はありません
+            </div>
+          )}
+        </section>
+      </div>
     </div>
   );
 }
