@@ -82,8 +82,10 @@ export default function InsightFeature({ albumId }: InsightFeatureProps) {
 
   if (error && !insight) {
     return (
-      <div className="mx-auto max-w-3xl p-4">
-        <p className="text-sm text-red-600">{error}</p>
+      <div className="min-h-screen bg-background-light p-5">
+        <div className="mx-auto max-w-md rounded-xl bg-white px-4 py-3 shadow-card">
+          <p className="text-sm text-red-600">{error}</p>
+        </div>
       </div>
     );
   }
@@ -93,77 +95,80 @@ export default function InsightFeature({ albumId }: InsightFeatureProps) {
   const isPositive = changeValue >= 0;
 
   return (
-    <div className="mx-auto grid max-w-3xl gap-6 p-4 pb-24">
-      {/* Header */}
-      <div>
-        {loadingInsight ? (
-          <div className="h-6 w-48 animate-pulse rounded bg-zinc-200 dark:bg-zinc-700" />
-        ) : (
-          <h1 className="text-lg font-semibold">
-            {insight?.albumBasicInfo.name}
-          </h1>
+    <div className="min-h-screen bg-background-light p-5">
+      <div className="mx-auto max-w-md space-y-4 pb-24">
+        {/* Header + Emo Value Card */}
+        <div className="rounded-xl bg-white px-5 py-4 shadow-card">
+          {loadingInsight ? (
+            <>
+              <div className="h-5 w-36 animate-pulse rounded-lg bg-gray-100" />
+              <div className="mt-3 h-8 w-40 animate-pulse rounded-lg bg-gray-100" />
+              <div className="mt-1 h-4 w-28 animate-pulse rounded-lg bg-gray-100" />
+            </>
+          ) : (
+            <>
+              <h1 className="text-[15px] font-medium text-gray-900">
+                {insight?.albumBasicInfo.name}
+              </h1>
+              <p className="mt-2 text-2xl font-bold text-gray-900">
+                {Math.round(
+                  insight?.emoValueInfo.emoValue ?? 0,
+                ).toLocaleString()}{' '}
+                <span className="text-sm font-normal text-gray-500">emo</span>
+              </p>
+              <p
+                className={`mt-0.5 text-[13px] font-medium ${isPositive ? 'text-green' : 'text-red-500'}`}
+              >
+                {isPositive ? '+' : ''}
+                {changeValue.toLocaleString()} emo ({isPositive ? '+' : ''}
+                {changePercent}%)
+              </p>
+            </>
+          )}
+        </div>
+
+        {/* Chart Card */}
+        <div className="rounded-xl bg-white px-4 py-4 shadow-card">
+          <PeriodTabs selected={period} onChange={setPeriod} />
+          <div className="mt-3">
+            <EmoChart data={chartData} loading={loadingChart} />
+          </div>
+        </div>
+
+        {/* Dividend Action */}
+        {insight && (
+          <DividendActionPanel
+            albumId={albumId}
+            plannedDividend={insight.albumBasicInfo.plannedDividend}
+            emoValue={insight.emoValueInfo.emoValue}
+            onComplete={handleDividendComplete}
+          />
+        )}
+
+        {/* Album Info Card */}
+        {insight && (
+          <div className="rounded-xl bg-white px-4 py-3 shadow-card">
+            <div className="space-y-2 text-[13px]">
+              <div className="flex justify-between">
+                <span className="text-gray-500">作成日</span>
+                <span className="text-gray-800">
+                  {insight.albumBasicInfo.createdAt}
+                </span>
+              </div>
+              {insight.albumBasicInfo.plannedDividend && (
+                <div className="flex justify-between">
+                  <span className="text-gray-500">配当予定日</span>
+                  <span className="text-gray-800">
+                    {new Date(
+                      insight.albumBasicInfo.plannedDividend,
+                    ).toLocaleDateString('ja-JP')}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
         )}
       </div>
-
-      {/* Emo Value Summary */}
-      <section className="grid gap-1">
-        {loadingInsight ? (
-          <>
-            <div className="h-10 w-40 animate-pulse rounded bg-zinc-200 dark:bg-zinc-700" />
-            <div className="h-4 w-24 animate-pulse rounded bg-zinc-200 dark:bg-zinc-700" />
-          </>
-        ) : (
-          <>
-            <p className="text-3xl font-bold">
-              {Math.round(insight?.emoValueInfo.emoValue ?? 0).toLocaleString()}{' '}
-              <span className="text-base font-normal text-zinc-500">emo</span>
-            </p>
-            <p
-              className={`text-sm ${isPositive ? 'text-green-600' : 'text-red-600'}`}
-            >
-              {isPositive ? '+' : ''}
-              {changeValue.toLocaleString()} emo ({isPositive ? '+' : ''}
-              {changePercent}%)
-            </p>
-          </>
-        )}
-      </section>
-
-      {/* Chart */}
-      <section className="grid gap-3">
-        <PeriodTabs selected={period} onChange={setPeriod} />
-        <EmoChart data={chartData} loading={loadingChart} />
-      </section>
-
-      {/* Dividend Action */}
-      {insight && (
-        <DividendActionPanel
-          albumId={albumId}
-          plannedDividend={insight.albumBasicInfo.plannedDividend}
-          emoValue={insight.emoValueInfo.emoValue}
-          onComplete={handleDividendComplete}
-        />
-      )}
-
-      {/* Album Info */}
-      {insight && (
-        <section className="grid gap-2 rounded border p-4 text-sm text-zinc-600 dark:text-zinc-400">
-          <div className="flex justify-between">
-            <span>作成日</span>
-            <span>{insight.albumBasicInfo.createdAt}</span>
-          </div>
-          {insight.albumBasicInfo.plannedDividend && (
-            <div className="flex justify-between">
-              <span>配当予定日</span>
-              <span>
-                {new Date(
-                  insight.albumBasicInfo.plannedDividend,
-                ).toLocaleDateString('ja-JP')}
-              </span>
-            </div>
-          )}
-        </section>
-      )}
     </div>
   );
 }

@@ -15,10 +15,10 @@ export default function PeriodTabs({ selected, onChange }: PeriodTabsProps) {
         <button
           key={p}
           onClick={() => onChange(p)}
-          className={`rounded px-3 py-1 text-xs font-medium transition-colors ${
+          className={`rounded-lg px-3 py-1 text-xs font-medium transition-colors ${
             selected === p
-              ? 'bg-black text-white dark:bg-white dark:text-black'
-              : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700'
+              ? 'bg-green text-white'
+              : 'bg-light-gray text-gray-500 active:bg-gray-200'
           }`}
         >
           {p}
