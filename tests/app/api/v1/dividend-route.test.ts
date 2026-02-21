@@ -144,14 +144,15 @@ const fakePrisma = {
       const where = args.where as {
         id: string;
         albumId: string;
-        isCompoundActive: boolean;
+        isCompoundActive?: boolean;
       };
       for (const album of albums) {
         const storage = album.photoStorages.find(
           (s) =>
             s.id === where.id &&
             s.albumId === where.albumId &&
-            s.isCompoundActive === where.isCompoundActive,
+            (where.isCompoundActive === undefined ||
+              s.isCompoundActive === where.isCompoundActive),
         );
         if (storage) return storage;
       }
@@ -314,7 +315,7 @@ describe('dividend routes', () => {
       expect(payload.events[0]?.photoStorageId).toBe('ps-1');
     });
 
-    it('returns 409 when storage already has RECEIVE event', async () => {
+    it('returns 409 when storage received a dividend within cooldown period', async () => {
       const { postDividend } = await routesPromise;
       const album = createAlbum({ id: 'album-2' });
       createStorage(album, { id: 'ps-3' });
@@ -340,7 +341,38 @@ describe('dividend routes', () => {
       const payload = (await response.json()) as { error: string };
 
       expect(response.status).toBe(409);
-      expect(payload.error).toBe('Dividend already executed for this storage');
+      expect(payload.error).toBe(
+        'This storage received a dividend recently. Please wait 7 days.',
+      );
+    });
+
+    it('allows RECEIVE when cooldown period has passed', async () => {
+      const { postDividend } = await routesPromise;
+      const album = createAlbum({ id: 'album-2b' });
+      createStorage(album, { id: 'ps-3b' });
+
+      const eightDaysAgo = new Date();
+      eightDaysAgo.setDate(eightDaysAgo.getDate() - 8);
+      dividendEvents.push({
+        id: 'evt-old',
+        albumId: 'album-2b',
+        photoStorageId: 'ps-3b',
+        action: 'RECEIVE',
+        emoValueAtEvent: 500,
+        previousBaseEmo: 100,
+        newBaseEmo: 0,
+        executedAt: eightDaysAgo,
+      });
+
+      const response = await postDividend(
+        createJsonRequest('/api/v1/albums/album-2b/dividend', {
+          action: 'RECEIVE',
+          photoStorageId: 'ps-3b',
+        }),
+        { params: Promise.resolve({ id: 'album-2b' }) },
+      );
+
+      expect(response.status).toBe(200);
     });
 
     it('allows RECEIVE when plannedDividend is null (single storage)', async () => {
@@ -472,10 +504,10 @@ describe('dividend routes', () => {
   });
 
   describe('GET /api/v1/dividend/[eventId]', () => {
-    it('returns event detail with photos', async () => {
+    it('returns event detail with photos when within viewing period', async () => {
       const { getDividendDetail } = await routesPromise;
       const album = createAlbum({ id: 'album-6' });
-      createStorage(album, { id: 'ps-6' });
+      createStorage(album, { id: 'ps-6', isCompoundActive: false });
 
       dividendEvents.push({
         id: 'evt-detail',
@@ -485,7 +517,7 @@ describe('dividend routes', () => {
         emoValueAtEvent: 1000,
         previousBaseEmo: 100,
         newBaseEmo: 0,
-        executedAt: new Date('2026-02-01'),
+        executedAt: new Date(),
       });
 
       const response = await getDividendDetail(
@@ -495,7 +527,12 @@ describe('dividend routes', () => {
       const payload = (await response.json()) as {
         dividendEvent: { id: string; action: string };
         album: { id: string; name: string };
-        photoStorage: { id: string; photos: unknown[] };
+        photoStorage: {
+          id: string;
+          photosVisible: boolean;
+          photosExpireAt: string;
+          photos: unknown[];
+        };
       };
 
       expect(response.status).toBe(200);
@@ -503,7 +540,74 @@ describe('dividend routes', () => {
       expect(payload.dividendEvent.action).toBe('RECEIVE');
       expect(payload.album.id).toBe('album-6');
       expect(payload.photoStorage.id).toBe('ps-6');
+      expect(payload.photoStorage.photosVisible).toBe(true);
+      expect(payload.photoStorage.photosExpireAt).toBeDefined();
       expect(payload.photoStorage.photos.length).toBe(1);
+    });
+
+    it('returns empty photos when viewing period expired', async () => {
+      const { getDividendDetail } = await routesPromise;
+      const album = createAlbum({ id: 'album-6b' });
+      createStorage(album, { id: 'ps-6b', isCompoundActive: false });
+
+      const tenDaysAgo = new Date();
+      tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
+      dividendEvents.push({
+        id: 'evt-expired',
+        albumId: 'album-6b',
+        photoStorageId: 'ps-6b',
+        action: 'RECEIVE',
+        emoValueAtEvent: 1000,
+        previousBaseEmo: 100,
+        newBaseEmo: 0,
+        executedAt: tenDaysAgo,
+      });
+
+      const response = await getDividendDetail(
+        new Request('http://localhost/api/v1/dividend/evt-expired'),
+        { params: Promise.resolve({ eventId: 'evt-expired' }) },
+      );
+      const payload = (await response.json()) as {
+        photoStorage: { photosVisible: boolean; photos: unknown[] };
+      };
+
+      expect(response.status).toBe(200);
+      expect(payload.photoStorage.photosVisible).toBe(false);
+      expect(payload.photoStorage.photos.length).toBe(0);
+    });
+
+    it('returns empty photos for REINVEST events', async () => {
+      const { getDividendDetail } = await routesPromise;
+      const album = createAlbum({ id: 'album-6c' });
+      createStorage(album, { id: 'ps-6c' });
+
+      dividendEvents.push({
+        id: 'evt-reinvest',
+        albumId: 'album-6c',
+        photoStorageId: 'ps-6c',
+        action: 'REINVEST',
+        emoValueAtEvent: 1000,
+        previousBaseEmo: 100,
+        newBaseEmo: 200,
+        executedAt: new Date(),
+      });
+
+      const response = await getDividendDetail(
+        new Request('http://localhost/api/v1/dividend/evt-reinvest'),
+        { params: Promise.resolve({ eventId: 'evt-reinvest' }) },
+      );
+      const payload = (await response.json()) as {
+        photoStorage: {
+          photosVisible: boolean;
+          photosExpireAt: string | null;
+          photos: unknown[];
+        };
+      };
+
+      expect(response.status).toBe(200);
+      expect(payload.photoStorage.photosVisible).toBe(false);
+      expect(payload.photoStorage.photosExpireAt).toBeNull();
+      expect(payload.photoStorage.photos.length).toBe(0);
     });
 
     it('returns 404 for non-existent event', async () => {

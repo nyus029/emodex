@@ -3,6 +3,8 @@ import { findAccessibleAlbum } from '@/lib/album-access';
 import { requireAuth, jsonSuccess, jsonError } from '@/lib/api-utils';
 import type { RouteContext } from '@/types/api';
 
+const PHOTO_VISIBLE_DAYS = 7;
+
 export async function GET(
   _request: Request,
   context: RouteContext<{ eventId: string }>,
@@ -45,6 +47,14 @@ export async function GET(
     return jsonError('Dividend event not found', 404);
   }
 
+  const isReceive = event.action === 'RECEIVE';
+  const expireAt = new Date(event.executedAt);
+  expireAt.setDate(expireAt.getDate() + PHOTO_VISIBLE_DAYS);
+
+  // Photos visible only for RECEIVE events within 7 days AND not yet reinvested
+  const photosVisible =
+    isReceive && !event.photoStorage.isCompoundActive && new Date() < expireAt;
+
   return jsonSuccess({
     dividendEvent: {
       id: event.id,
@@ -62,13 +72,18 @@ export async function GET(
       id: event.photoStorage.id,
       name: event.photoStorage.name,
       photoCount: event.photoStorage.photoCount,
+      isCompoundActive: event.photoStorage.isCompoundActive,
       tags: (event.photoStorage.tags as string[]) ?? [],
-      photos: event.photoStorage.photos.map((p) => ({
-        id: p.id,
-        fileName: p.fileName,
-        blobUrl: p.blobUrl,
-        contentType: p.contentType,
-      })),
+      photosVisible,
+      photosExpireAt: isReceive ? expireAt.toISOString() : null,
+      photos: photosVisible
+        ? event.photoStorage.photos.map((p) => ({
+            id: p.id,
+            fileName: p.fileName,
+            blobUrl: p.blobUrl,
+            contentType: p.contentType,
+          }))
+        : [],
     },
   });
 }

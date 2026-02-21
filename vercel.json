@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/emo-snapshots",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/expired-photos",
+      "schedule": "0 1 * * *"
     }
   ]
 }

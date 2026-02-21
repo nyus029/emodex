@@ -8,7 +8,8 @@ export async function GET() {
   if (auth.error) return auth.error;
   const { userId, userEmail } = auth.session;
 
-  const albums = await findUserAlbumsWithShared(
+  // Pending: albums with plannedDividend set
+  const pendingAlbums = await findUserAlbumsWithShared(
     userId,
     userEmail,
     async (where) => {
@@ -56,9 +57,7 @@ export async function GET() {
     tags: string[];
   }> = [];
 
-  const albumIds = albums.map((a) => a.id);
-
-  for (const album of albums) {
+  for (const album of pendingAlbums) {
     if (!album.plannedDividend || album.plannedDividend > now) continue;
 
     for (const storage of album.photoStorages) {
@@ -89,8 +88,27 @@ export async function GET() {
     }
   }
 
+  // Completed: all accessible albums (regardless of plannedDividend)
+  const allAlbums = await findUserAlbumsWithShared(
+    userId,
+    userEmail,
+    async (where) => {
+      const own = await prisma.album.findMany({
+        where: where.own,
+        select: { id: true, userId: true, albumType: true, groupId: true },
+      });
+      const shared = await prisma.album.findMany({
+        where: where.shared,
+        select: { id: true, userId: true, albumType: true, groupId: true },
+      });
+      return { own, shared };
+    },
+  );
+
+  const allAlbumIds = allAlbums.map((a) => a.id);
+
   const completedEvents = await prisma.dividendEvent.findMany({
-    where: { albumId: { in: albumIds } },
+    where: { albumId: { in: allAlbumIds } },
     include: {
       album: { select: { id: true, name: true } },
       photoStorage: { select: { id: true, name: true } },
