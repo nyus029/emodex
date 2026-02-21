@@ -23,7 +23,7 @@ export default function EmoTypeSelector({
           className={`${base} ${value === 'PRIVATE' ? active : inactive}`}
           onClick={() => onChange('PRIVATE')}
         >
-          <span className="block">公開エモ</span>
+          <span className="block">非公開エモ</span>
           <span className="block text-xs">（個人）</span>
         </button>
         <button
@@ -31,7 +31,7 @@ export default function EmoTypeSelector({
           className={`${base} ${value === 'SHARED' ? active : inactive}`}
           onClick={() => onChange('SHARED')}
         >
-          <span className="block">非公開エモ</span>
+          <span className="block">公開エモ</span>
           <span className="block text-xs">（グループ共有）</span>
         </button>
       </div>
