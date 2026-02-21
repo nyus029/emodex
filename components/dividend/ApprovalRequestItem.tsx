@@ -6,10 +6,12 @@ import { useState } from 'react';
 interface ApprovalRequestItemProps {
   approvalRequestId: string;
   albumName: string;
+  albumType: string;
   photoStorageName: string;
   photoCount: number;
   emoValueAtRequest: number;
   tags: string[];
+  thumbnailUrl: string | null;
   requestedBy: { id: number; name: string };
   expiresAt: string;
   approvedCount: number;
@@ -21,10 +23,12 @@ interface ApprovalRequestItemProps {
 export default function ApprovalRequestItem({
   approvalRequestId,
   albumName,
+  albumType,
   photoStorageName,
   photoCount,
   emoValueAtRequest,
   tags,
+  thumbnailUrl,
   requestedBy,
   expiresAt,
   approvedCount,
@@ -37,6 +41,7 @@ export default function ApprovalRequestItem({
   const [error, setError] = useState<string | null>(null);
 
   const formattedExpiry = new Date(expiresAt).toLocaleDateString('ja-JP');
+  const peopleIcon = albumType === 'SHARED' ? '/users.svg' : '/user.svg';
 
   async function handleApprove() {
     setSubmitting(true);
@@ -44,7 +49,9 @@ export default function ApprovalRequestItem({
     try {
       const res = await fetch(
         `/api/v1/dividend/approvals/${approvalRequestId}`,
-        { method: 'POST' },
+        {
+          method: 'POST',
+        },
       );
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -102,17 +109,29 @@ export default function ApprovalRequestItem({
   return (
     <div className="grid gap-3 rounded-xl bg-white px-4 py-3 shadow-card">
       <div className="flex items-center gap-4">
-        <Image
-          src="/mockphoto.png"
-          alt="thumbnail"
-          width={64}
-          height={64}
-          className="h-16 w-16 shrink-0 rounded-xl object-cover"
-        />
+        {thumbnailUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={thumbnailUrl}
+            alt={albumName}
+            width="64"
+            height="64"
+            className="h-16 w-16 shrink-0 rounded-xl object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <Image
+            src="/mockphoto.png"
+            alt={albumName}
+            width={64}
+            height={64}
+            className="h-16 w-16 shrink-0 rounded-xl object-cover"
+          />
+        )}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <Image
-              src="/users.svg"
+              src={peopleIcon}
               alt="user"
               width={20}
               height={20}

@@ -21,6 +21,13 @@ export async function GET() {
         include: {
           photoStorages: {
             where: { isCompoundActive: true },
+            include: {
+              photos: {
+                select: { blobUrl: true },
+                orderBy: { createdAt: 'asc' },
+                take: 1,
+              },
+            },
           },
           dividendEvents: {
             orderBy: { executedAt: 'desc' },
@@ -35,6 +42,13 @@ export async function GET() {
         include: {
           photoStorages: {
             where: { isCompoundActive: true },
+            include: {
+              photos: {
+                select: { blobUrl: true },
+                orderBy: { createdAt: 'asc' },
+                take: 1,
+              },
+            },
           },
           dividendEvents: {
             orderBy: { executedAt: 'desc' },
@@ -56,6 +70,7 @@ export async function GET() {
     photoCount: number;
     emoValue: number;
     tags: string[];
+    thumbnailUrl: string | null;
   }> = [];
 
   for (const album of pendingAlbums) {
@@ -86,6 +101,7 @@ export async function GET() {
         photoCount: storage.photoCount,
         emoValue: roundEmo(emoValue),
         tags: (storage.tags as string[]) ?? [],
+        thumbnailUrl: storage.photos[0]?.blobUrl ?? null,
       });
     }
   }
@@ -107,6 +123,8 @@ export async function GET() {
     photoCount: number;
     emoValueAtRequest: number;
     tags: string[];
+    albumType: string;
+    thumbnailUrl: string | null;
     requestedBy: { id: number; name: string };
     status: string;
     expiresAt: string;
@@ -134,9 +152,19 @@ export async function GET() {
         approvals: { some: { userId: dbUser.id } },
       },
       include: {
-        album: { select: { id: true, name: true } },
+        album: { select: { id: true, name: true, albumType: true } },
         photoStorage: {
-          select: { id: true, name: true, photoCount: true, tags: true },
+          select: {
+            id: true,
+            name: true,
+            photoCount: true,
+            tags: true,
+            photos: {
+              select: { blobUrl: true },
+              orderBy: { createdAt: 'asc' },
+              take: 1,
+            },
+          },
         },
         requestedByUser: { select: { id: true, name: true } },
         approvals: {
@@ -150,11 +178,13 @@ export async function GET() {
       approvalRequestId: r.id,
       albumId: r.album.id,
       albumName: r.album.name,
+      albumType: r.album.albumType,
       photoStorageId: r.photoStorage.id,
       photoStorageName: r.photoStorage.name,
       photoCount: r.photoStorage.photoCount,
       emoValueAtRequest: roundEmo(r.emoValueAtRequest),
       tags: (r.photoStorage.tags as string[]) ?? [],
+      thumbnailUrl: r.photoStorage.photos[0]?.blobUrl ?? null,
       requestedBy: {
         id: r.requestedByUser.id,
         name: r.requestedByUser.name,
@@ -191,8 +221,18 @@ export async function GET() {
   const completedEvents = await prisma.dividendEvent.findMany({
     where: { albumId: { in: allAlbumIds } },
     include: {
-      album: { select: { id: true, name: true } },
-      photoStorage: { select: { id: true, name: true } },
+      album: { select: { id: true, name: true, albumType: true } },
+      photoStorage: {
+        select: {
+          id: true,
+          name: true,
+          photos: {
+            select: { blobUrl: true },
+            orderBy: { createdAt: 'asc' },
+            take: 1,
+          },
+        },
+      },
     },
     orderBy: { executedAt: 'desc' },
   });
@@ -201,8 +241,10 @@ export async function GET() {
     dividendEventId: e.id,
     albumId: e.album.id,
     albumName: e.album.name,
+    albumType: e.album.albumType,
     photoStorageId: e.photoStorage.id,
     photoStorageName: e.photoStorage.name,
+    thumbnailUrl: e.photoStorage.photos[0]?.blobUrl ?? null,
     action: e.action as 'REINVEST' | 'RECEIVE',
     emoValueAtEvent: roundEmo(e.emoValueAtEvent),
     executedAt: e.executedAt.toISOString(),
