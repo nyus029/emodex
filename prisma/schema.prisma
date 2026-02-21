@@ -200,6 +200,7 @@ model MoodRecord {
   sentence           String    @db.Text
   words              Json
   recommendationText String?   @db.Text
+  boostedAlbumIds    Json?
   createdAt          DateTime  @default(now())
 
   @@index([userId])

@@ -1,7 +1,11 @@
 import { prisma } from '@/lib/prisma';
 import { findAccessibleAlbum } from '@/lib/album-access';
-import { calculateAlbumEmo, type StorageParams } from '@/lib/emo-value';
+import {
+  calculateAlbumEmoWithBoost,
+  type StorageParams,
+} from '@/lib/emo-value';
 import { requireAuth, jsonSuccess, jsonError, roundEmo } from '@/lib/api-utils';
+import { getTodayBoostCounts } from '@/lib/emo-boost';
 import type { RouteContext } from '@/types/api';
 
 const PERIOD_DAYS: Record<string, number> = {
@@ -79,14 +83,19 @@ export async function GET(
   });
   const storages: StorageParams[] = photoStorages;
 
+  const boostCounts = await getTodayBoostCounts([id]);
+  const boostCount = boostCounts.get(id) ?? 0;
+
   const todayStr = now.toISOString().split('T')[0];
-  const todayValue = calculateAlbumEmo(storages, now);
+  const todayValue = calculateAlbumEmoWithBoost(storages, boostCount, now);
   const lastEntry = data[data.length - 1];
   if (!lastEntry || lastEntry.time !== todayStr) {
     data.push({
       time: todayStr,
       value: roundEmo(todayValue),
     });
+  } else if (boostCount > 0) {
+    lastEntry.value = roundEmo(todayValue);
   }
 
   return jsonSuccess({ period, data });
