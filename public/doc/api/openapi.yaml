@@ -42,6 +42,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/health/storage:
+    get:
+      tags:
+        - Health
+      summary: Mastra storage backend check
+      description: Returns whether Mastra storage is using Turso or local file (file or file_tmp on Vercel).
+      responses:
+        '200':
+          description: Storage backend type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorageHealthResponse'
   /api/chat/stream:
     post:
       tags:
@@ -1010,6 +1023,20 @@ components:
         message:
           type: string
           example: Database connection is healthy
+    StorageHealthResponse:
+      type: object
+      required:
+        - mastraStorage
+        - tursoConfigured
+      properties:
+        mastraStorage:
+          type: string
+          description: Storage backend. One of file, file_tmp, turso.
+          example: file
+        tursoConfigured:
+          type: boolean
+          description: True when Mastra storage is Turso (TURSO_DATABASE_URL set).
+          example: false
     ChatRequest:
       type: object
       required:

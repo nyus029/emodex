@@ -1,6 +1,9 @@
-import { mastra } from '@/mastra';
-
 const encoder = new TextEncoder();
+
+async function getMastra() {
+  const { mastra } = await import('@/mastra');
+  return mastra;
+}
 
 function createMockStream(message: string) {
   const chunks = [
@@ -35,6 +38,19 @@ export async function POST(request: Request) {
         'Cache-Control': 'no-cache',
       },
     });
+  }
+
+  let mastra;
+  try {
+    mastra = await getMastra();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('Mastra init error (chat stream):', msg);
+    if (err instanceof Error && err.stack) console.error(err.stack);
+    return Response.json(
+      { error: 'Mastra storage failed to initialize.', details: msg },
+      { status: 500 },
+    );
   }
 
   const agent = mastra.getAgent('chatAgent');
