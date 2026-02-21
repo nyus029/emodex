@@ -11,13 +11,12 @@ export default function EmoTypeSelector({
 }: EmoTypeSelectorProps) {
   const base =
     'flex-1 rounded-lg px-4 py-3 text-sm font-medium transition-colors';
-  const active = 'bg-black text-white dark:bg-white dark:text-black';
-  const inactive =
-    'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700';
+  const active = 'bg-green text-white';
+  const inactive = 'bg-light-gray text-gray-500 active:bg-gray-200';
 
   return (
-    <div className="grid gap-1">
-      <span className="text-sm">エモタイプ</span>
+    <div className="grid gap-2">
+      <span className="text-sm font-semibold text-gray-600">エモタイプ</span>
       <div className="flex gap-2">
         <button
           type="button"

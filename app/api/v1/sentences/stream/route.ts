@@ -1,7 +1,11 @@
-import { mastra } from '@/mastra';
 import { z } from 'zod';
 
 const encoder = new TextEncoder();
+
+async function getMastra() {
+  const { mastra } = await import('@/mastra');
+  return mastra;
+}
 
 const bodySchema = z.object({
   words: z.array(z.string()).min(1, 'At least one word is required'),
@@ -43,6 +47,22 @@ export async function POST(request: Request) {
           'OPENAI_API_KEY is not set. Set it to use Codex for sentence streaming.',
       },
       { status: 503 },
+    );
+  }
+
+  let mastra;
+  try {
+    mastra = await getMastra();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('Mastra init error (sentence stream):', message);
+    if (err instanceof Error && err.stack) console.error(err.stack);
+    return Response.json(
+      {
+        error: 'Mastra storage failed to initialize.',
+        details: message,
+      },
+      { status: 500 },
     );
   }
 

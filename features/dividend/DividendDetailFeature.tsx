@@ -1,8 +1,7 @@
 'use client';
 
+import Image from 'next/image';
 import { useCallback, useEffect, useState } from 'react';
-import DividendEventHeader from '@/components/dividend/DividendEventHeader';
-import PhotoGallery from '@/components/dividend/PhotoGallery';
 
 interface Photo {
   id: string;
@@ -61,47 +60,117 @@ export default function DividendDetailFeature({
 
   if (error && !data) {
     return (
-      <div className="mx-auto max-w-3xl p-4">
-        <p className="text-sm text-red-600">{error}</p>
+      <div className="min-h-screen bg-background-light p-5">
+        <div className="mx-auto max-w-md rounded-xl bg-white px-4 py-3 shadow-card">
+          <p className="text-sm text-red-600">{error}</p>
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className="mx-auto grid max-w-3xl gap-6 p-4 pb-24">
-      {loading ? (
-        <>
-          <div className="h-40 animate-pulse rounded-lg bg-zinc-200 dark:bg-zinc-700" />
-          <div className="h-8 w-24 animate-pulse rounded bg-zinc-200 dark:bg-zinc-700" />
-          <div className="grid grid-cols-3 gap-1">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div
-                key={i}
-                className="aspect-square animate-pulse rounded bg-zinc-200 dark:bg-zinc-700"
-              />
-            ))}
-          </div>
-        </>
-      ) : data ? (
-        <>
-          <DividendEventHeader
-            action={data.dividendEvent.action}
-            emoValueAtEvent={data.dividendEvent.emoValueAtEvent}
-            previousBaseEmo={data.dividendEvent.previousBaseEmo}
-            newBaseEmo={data.dividendEvent.newBaseEmo}
-            executedAt={data.dividendEvent.executedAt}
-            albumName={data.album.name}
-            photoStorageName={data.photoStorage.name}
-          />
+  const photos = data?.photoStorage.photos ?? [];
+  const photoSlots = Array.from({ length: 9 }).map(
+    (_, index) => photos[index] ?? null,
+  );
+  const formattedExecutedAt = data
+    ? new Date(data.dividendEvent.executedAt).toLocaleDateString('ja-JP')
+    : '';
 
-          <section className="grid gap-3">
-            <h2 className="text-lg font-bold">
-              写真 ({data.photoStorage.photoCount})
-            </h2>
-            <PhotoGallery photos={data.photoStorage.photos} />
-          </section>
-        </>
-      ) : null}
+  return (
+    <div className="min-h-screen bg-background-light p-5">
+      <div className="mx-auto max-w-md pb-24">
+        {loading ? (
+          <div className="space-y-8">
+            <div className="h-28 animate-pulse rounded-xl bg-white shadow-card" />
+            <div className="grid grid-cols-3 gap-2">
+              {Array.from({ length: 9 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="aspect-square animate-pulse rounded-xl bg-white shadow-card"
+                />
+              ))}
+            </div>
+          </div>
+        ) : data ? (
+          <div>
+            <div className="rounded-xl bg-white px-4 py-3 shadow-card">
+              <div className="flex items-center gap-4">
+                <Image
+                  src="/mockphoto.png"
+                  alt="thumbnail"
+                  width={64}
+                  height={64}
+                  className="h-16 w-16 shrink-0 rounded-xl object-cover"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <Image
+                      src="/users.svg"
+                      alt="user"
+                      width={20}
+                      height={20}
+                      className="shrink-0"
+                    />
+                    <div className="truncate text-[15px] font-medium text-gray-900">
+                      {data.album.name}
+                    </div>
+                  </div>
+                  <div className="mt-1 space-y-1 text-[13px] text-gray-800">
+                    <div className="flex gap-3">
+                      <span className="w-12 text-gray-500">配当日</span>
+                      <span className="tabular-nums">
+                        {formattedExecutedAt}
+                      </span>
+                    </div>
+                    <div className="flex gap-3">
+                      <span className="w-12 text-gray-500">期限</span>
+                      <span className="truncate">{data.photoStorage.name}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-2 flex items-center gap-2 text-xs">
+                <span
+                  className={`rounded px-1.5 py-0.5 font-medium ${
+                    data.dividendEvent.action === 'REINVEST'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'bg-amber-100 text-amber-700'
+                  }`}
+                >
+                  {data.dividendEvent.action === 'REINVEST' ? '再投資' : '受取'}
+                </span>
+                <span className="text-gray-500">
+                  {Math.round(
+                    data.dividendEvent.emoValueAtEvent,
+                  ).toLocaleString()}{' '}
+                  emo
+                </span>
+              </div>
+            </div>
+
+            <section className="mt-8 grid grid-cols-3 gap-2">
+              {photoSlots.map((photo, index) => (
+                <div
+                  key={photo?.id ?? `placeholder-${index}`}
+                  className="relative aspect-square"
+                >
+                  {photo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={photo.blobUrl}
+                      alt={photo.fileName}
+                      className="h-full w-full rounded-xl object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="h-full w-full rounded-xl bg-white shadow-card" />
+                  )}
+                </div>
+              ))}
+            </section>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

@@ -35,13 +35,15 @@ export default function TagInput({
 
   return (
     <div className="grid gap-2">
-      <label className="grid gap-1">
-        <span className="text-sm">タグ（任意、Enterで追加）</span>
+      <label className="grid gap-2">
+        <span className="text-sm font-semibold text-gray-600">
+          タグ（任意、Enterで追加）
+        </span>
         <input
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="rounded border px-3 py-2"
+          className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900"
           placeholder="タグを入力してEnter"
           maxLength={50}
         />
@@ -51,15 +53,15 @@ export default function TagInput({
           {tags.map((tag, i) => (
             <span
               key={tag}
-              className="inline-flex items-center gap-1 rounded-full bg-zinc-200 px-2 py-0.5 text-xs dark:bg-zinc-700"
+              className="inline-flex items-center gap-1 rounded-full bg-light-gray px-2 py-0.5 text-xs text-gray-700"
             >
               {tag}
               <button
                 type="button"
                 onClick={() => removeTag(i)}
-                className="text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+                className="text-gray-400 hover:text-gray-600"
               >
-                x
+                ×
               </button>
             </span>
           ))}
@@ -67,13 +69,13 @@ export default function TagInput({
       )}
       {unusedSuggestions.length > 0 && (
         <div className="flex flex-wrap gap-1">
-          <span className="text-xs text-zinc-500">サジェスト:</span>
+          <span className="text-xs text-gray-500">サジェスト:</span>
           {unusedSuggestions.map((s) => (
             <button
               key={s}
               type="button"
               onClick={() => addTag(s)}
-              className="rounded-full border px-2 py-0.5 text-xs hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              className="rounded-full border border-gray-200 px-2 py-0.5 text-xs text-gray-500 hover:bg-gray-100"
             >
               + {s}
             </button>

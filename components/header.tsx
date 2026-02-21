@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import React from 'react';
+import Link from 'next/link';
 import SpeechBubble from '@/components/speechbubble';
 import { useAgentComment } from '@/lib/agent-comment-context';
 import { useUser } from '@auth0/nextjs-auth0/client';
@@ -27,26 +28,48 @@ export default function Header({
   const { user } = useUser();
   const [currentAvatarSrc, setCurrentAvatarSrc] =
     React.useState<string>(avatarSrc);
+  const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false);
 
   React.useEffect(() => {
     setCurrentAvatarSrc(user?.picture ?? avatarSrc);
   }, [user?.picture, avatarSrc]);
 
+  const handleAvatarClick = () => {
+    if (onAvatarClick) {
+      onAvatarClick();
+      return;
+    }
+
+    if (user) {
+      setShowLogoutConfirm(true);
+      return;
+    }
+
+    window.location.href = '/auth/login';
+  };
+
+  const handleLogout = () => {
+    window.location.href = '/auth/logout';
+  };
+
   return (
     <div>
       {/* Header */}
-      <header className="w-full shadow-card bg-white">
+      {/* pt-safe: iOS ノッチ・ステータスバー分の safe area を確保 */}
+      <header className="w-full shadow-card bg-white pt-safe">
         <div className="mx-auto max-w-5xl px-4 py-3.5">
           <div className="flex items-center justify-between">
             {/* Left */}
             <div className="flex items-center gap-3">
-              <Image
-                src="/icon.svg"
-                width={40}
-                height={40}
-                alt="Emodex logo"
-                className="h-10 w-10"
-              />
+              <Link href="/" aria-label="ホームに戻る" className="block">
+                <Image
+                  src="/icon.svg"
+                  width={40}
+                  height={40}
+                  alt="Emodex logo"
+                  className="h-10 w-10"
+                />
+              </Link>
 
               <div className="leading-tight">
                 <div className="text-lg font-semibold text-gray-900">
@@ -60,10 +83,11 @@ export default function Header({
 
             {/* Right */}
             <div className="flex items-center gap-3">
+              {/* タッチターゲット最小 44px を確保 */}
               <button
                 type="button"
                 onClick={onBellClick}
-                className="h-9 w-9 rounded-full hover:bg-gray-100 flex items-center justify-center"
+                className="h-11 w-11 rounded-full hover:bg-gray-100 flex items-center justify-center"
               >
                 <svg
                   width="24"
@@ -91,8 +115,8 @@ export default function Header({
 
               <button
                 type="button"
-                onClick={onAvatarClick}
-                className="h-10 w-10 rounded-full overflow-hidden border hover:opacity-90"
+                onClick={handleAvatarClick}
+                className="h-11 w-11 rounded-full overflow-hidden border hover:opacity-90 flex items-center justify-center"
               >
                 <Image
                   src={currentAvatarSrc}
@@ -121,26 +145,55 @@ export default function Header({
         />
 
         {/* 中身 */}
-        <div className="relative z-10 mx-auto max-w-5xl px-6">
-          <div className="flex items-center gap-6">
-            {/* human */}
+        <div className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6">
+          <div className="flex items-center gap-3 sm:gap-6">
+            {/* human: モバイルでやや小さく */}
             <Image
               src="/human.svg"
               alt="human"
               width={50}
               height={75}
               sizes="80px"
-              className="w-20 h-auto shrink-0"
+              className="w-14 sm:w-20 h-auto shrink-0"
             />
 
             {/* 吹き出し */}
             <SpeechBubble
               text={agentComment || DEFAULT_BUBBLE_TEXT}
-              className="w-full"
+              className="w-full min-w-0"
             />
           </div>
         </div>
       </div>
+
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-card">
+            <p className="text-sm font-medium text-gray-900">
+              ログアウトしますか？
+            </p>
+            <p className="mt-2 text-xs text-gray-600">
+              現在のセッションを終了します。
+            </p>
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="rounded-lg bg-green px-4 py-2 text-sm font-medium text-white"
+              >
+                ログアウトする
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowLogoutConfirm(false)}
+                className="rounded-lg bg-light-gray px-4 py-2 text-sm font-medium text-gray-600"
+              >
+                キャンセル
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

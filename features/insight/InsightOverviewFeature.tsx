@@ -48,8 +48,10 @@ export default function InsightOverviewFeature() {
 
   if (error && !data) {
     return (
-      <div className="mx-auto max-w-3xl p-4">
-        <p className="text-sm text-red-600">{error}</p>
+      <div className="min-h-screen bg-background-light p-5">
+        <div className="mx-auto max-w-md rounded-xl bg-white px-4 py-3 shadow-card">
+          <p className="text-sm text-red-600">{error}</p>
+        </div>
       </div>
     );
   }
@@ -58,82 +60,87 @@ export default function InsightOverviewFeature() {
   const isTotalPositive = (totalChange?.value ?? 0) >= 0;
 
   return (
-    <div className="mx-auto grid max-w-3xl gap-6 p-4 pb-24">
-      {/* Header: Total Emo Value */}
-      <section className="grid gap-1">
-        <p className="text-sm text-zinc-500">総エモ価</p>
-        {loading ? (
-          <>
-            <div className="h-10 w-40 animate-pulse rounded bg-zinc-200 dark:bg-zinc-700" />
-            <div className="h-4 w-24 animate-pulse rounded bg-zinc-200 dark:bg-zinc-700" />
-          </>
-        ) : (
-          <>
-            <p className="text-3xl font-bold">
-              {Math.round(data?.totalEmoValue ?? 0).toLocaleString()}{' '}
-              <span className="text-base font-normal text-zinc-500">emo</span>
-            </p>
-            <p
-              className={`text-sm ${isTotalPositive ? 'text-green-600' : 'text-red-600'}`}
-            >
-              {isTotalPositive ? '+' : ''}
-              {(totalChange?.value ?? 0).toLocaleString()} emo (
-              {isTotalPositive ? '+' : ''}
-              {totalChange?.percentage ?? 0}%)
-            </p>
-          </>
-        )}
-      </section>
-
-      {/* Album List */}
-      <section className="grid gap-3">
-        {loading ? (
-          Array.from({ length: 3 }).map((_, i) => (
-            <div
-              key={i}
-              className="h-20 animate-pulse rounded-lg bg-zinc-200 dark:bg-zinc-700"
-            />
-          ))
-        ) : data && data.albums.length > 0 ? (
-          data.albums.map((album) => {
-            const isPositive = album.dayOverDayChange.value >= 0;
-            return (
-              <Link
-                key={album.id}
-                href={`/invests/${album.id}/insight`}
-                className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+    <div className="min-h-screen bg-background-light p-5">
+      <div className="mx-auto max-w-md space-y-4 pb-24">
+        {/* Total Emo Value Card */}
+        <div className="rounded-xl bg-white px-5 py-4 shadow-card">
+          <p className="text-[13px] text-gray-500">総エモ価</p>
+          {loading ? (
+            <>
+              <div className="mt-2 h-8 w-36 animate-pulse rounded-lg bg-gray-100" />
+              <div className="mt-1 h-4 w-28 animate-pulse rounded-lg bg-gray-100" />
+            </>
+          ) : (
+            <>
+              <p className="mt-1 text-2xl font-bold text-gray-900">
+                {Math.round(data?.totalEmoValue ?? 0).toLocaleString()}{' '}
+                <span className="text-sm font-normal text-gray-500">emo</span>
+              </p>
+              <p
+                className={`mt-0.5 text-[13px] font-medium ${isTotalPositive ? 'text-green' : 'text-red-500'}`}
               >
-                <div className="grid gap-0.5">
-                  <span className="font-medium">{album.name}</span>
-                  <span className="text-xs text-zinc-500">
-                    {album.albumType === 'SHARED'
-                      ? (album.groupName ?? 'SHARED')
-                      : 'PRIVATE'}
-                  </span>
-                </div>
-                <div className="grid gap-0.5 text-right">
-                  <span className="font-medium">
-                    {Math.round(album.emoValue).toLocaleString()}{' '}
-                    <span className="text-xs font-normal text-zinc-500">
-                      emo
+                {isTotalPositive ? '+' : ''}
+                {(totalChange?.value ?? 0).toLocaleString()} emo (
+                {isTotalPositive ? '+' : ''}
+                {totalChange?.percentage ?? 0}%)
+              </p>
+            </>
+          )}
+        </div>
+
+        {/* Album List */}
+        <section className="space-y-3">
+          <h2 className="px-1 text-sm font-semibold text-gray-600">アルバム</h2>
+          {loading ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-[72px] animate-pulse rounded-xl bg-white shadow-card"
+              />
+            ))
+          ) : data && data.albums.length > 0 ? (
+            data.albums.map((album) => {
+              const isPositive = album.dayOverDayChange.value >= 0;
+              return (
+                <Link
+                  key={album.id}
+                  href={`/invests/${album.id}/insight`}
+                  className="flex items-center justify-between rounded-xl bg-white px-4 py-3 shadow-card transition-colors active:bg-gray-50"
+                >
+                  <div className="grid gap-0.5">
+                    <span className="text-[15px] font-medium text-gray-900">
+                      {album.name}
                     </span>
-                  </span>
-                  <span
-                    className={`text-xs ${isPositive ? 'text-green-600' : 'text-red-600'}`}
-                  >
-                    {isPositive ? '+' : ''}
-                    {album.dayOverDayChange.percentage}%
-                  </span>
-                </div>
-              </Link>
-            );
-          })
-        ) : (
-          <div className="rounded-lg border border-dashed p-8 text-center text-sm text-zinc-500">
-            アルバムがありません。INVESTからアルバムを作成してください。
-          </div>
-        )}
-      </section>
+                    <span className="text-[13px] text-gray-500">
+                      {album.albumType === 'SHARED'
+                        ? (album.groupName ?? 'SHARED')
+                        : 'PRIVATE'}
+                    </span>
+                  </div>
+                  <div className="grid gap-0.5 text-right">
+                    <span className="text-[15px] font-medium text-gray-900">
+                      {Math.round(album.emoValue).toLocaleString()}{' '}
+                      <span className="text-[13px] font-normal text-gray-500">
+                        emo
+                      </span>
+                    </span>
+                    <span
+                      className={`text-[13px] font-medium ${isPositive ? 'text-green' : 'text-red-500'}`}
+                    >
+                      {isPositive ? '+' : ''}
+                      {album.dayOverDayChange.percentage}%
+                    </span>
+                  </div>
+                </Link>
+              );
+            })
+          ) : (
+            <div className="rounded-xl bg-white p-8 text-center text-sm text-gray-500 shadow-card">
+              アルバムがありません。INVESTからアルバムを作成してください。
+            </div>
+          )}
+        </section>
+      </div>
     </div>
   );
 }

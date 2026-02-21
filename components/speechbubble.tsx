@@ -15,9 +15,11 @@ export default function SpeechBubble({
     <div className={['relative inline-block', className].join(' ')}>
       {/* 影をまとめて付ける“外枠” */}
       <div className="relative shadow-card rounded-lg">
-        {/* 本体 */}
-        <div className="bg-white px-8 py-6 rounded-lg">
-          <p className="text-black text-sm font-semibold">{text}</p>
+        {/* 本体: モバイルはコンパクト、sm以上は余裕を持たせる */}
+        <div className="bg-white px-4 py-3 sm:px-6 sm:py-4 rounded-lg">
+          <p className="text-black text-sm font-semibold line-clamp-3">
+            {text}
+          </p>
         </div>
 
         {/* しっぽ（三角） */}

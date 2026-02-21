@@ -172,6 +172,10 @@ APP_BASE_URL=http://localhost:3000
 # Optional Mastra Cloud observability
 MASTRA_CLOUD_ACCESS_TOKEN=
 
+# Mastra storage: set for cloud deploy (Turso). Omit for local file (mastra.db).
+# TURSO_DATABASE_URL=
+# TURSO_AUTH_TOKEN=
+
 # Vercel Cron secret for /api/cron/* endpoints
 CRON_SECRET=
 ```
@@ -232,7 +236,7 @@ npm run db:migrate
 
 ## Mastra AI Layer
 
-All Mastra code lives in `mastra/`. The entry point `mastra/index.ts` creates the `Mastra` instance and wires together agents, workflows, storage (LibSQL file), logger (Pino), and observability.
+All Mastra code lives in `mastra/`. The entry point `mastra/index.ts` creates the `Mastra` instance and wires together agents, workflows, storage (LibSQL: local file or Turso when `TURSO_DATABASE_URL` is set), logger (Pino), and observability.
 
 ### Agents
 
@@ -309,7 +313,7 @@ components/**       →  reusable, display-only UI parts
 Mastra is configured with:
 
 - `PinoLogger` (name `Mastra`, level `info`) → structured logging
-- `LibSQLStore` → persists traces/scores to `mastra.db` (local file)
+- `LibSQLStore` → persists traces/scores to `mastra.db` locally, or to Turso when `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` are set (recommended for cloud deploy)
 - `DefaultExporter` → persists traces to storage (visible in Mastra Studio)
 - `CloudExporter` → sends traces to Mastra Cloud if `MASTRA_CLOUD_ACCESS_TOKEN` is set
 - `SensitiveDataFilter` → redacts passwords, tokens, keys from spans

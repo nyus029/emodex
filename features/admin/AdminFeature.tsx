@@ -210,7 +210,7 @@ export default function AdminFeature() {
   }, [data]);
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-6 py-10">
+    <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6 sm:py-10 pb-24">
       <AuthTestSetComponent />
 
       <section className="rounded-xl border p-5">

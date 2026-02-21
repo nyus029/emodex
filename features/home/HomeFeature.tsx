@@ -11,7 +11,6 @@ import ChatForm from '@/components/chat/ChatForm';
 import ChatResponse from '@/components/chat/ChatResponse';
 import SentenceGenerateForm from '@/components/sentences/SentenceGenerateForm';
 import NotificationTest from '@/components/notification/NotificationTest';
-import AuthTestSetComponent from '@/components/auth/AuthTestSetComponent';
 import type { AlbumResponse } from '@/lib/albums';
 import { toPathSegment } from '@/lib/path';
 import { useAgentComment } from '@/lib/agent-comment-context';
@@ -434,8 +433,7 @@ export default function HomeFeature() {
   };
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-6 px-6 py-10">
-      <AuthTestSetComponent />
+    <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-6 px-4 py-6 sm:px-6 sm:py-10 pb-24">
       <div className="flex gap-4">
         <Link
           href="/admin"
