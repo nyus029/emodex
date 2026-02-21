@@ -18,12 +18,12 @@ export default function LayoutShell({ children }: LayoutShellProps) {
   const shouldHideLayout = HIDE_LAYOUT_PATHS.has(pathname);
 
   if (shouldHideLayout) {
-    return <main className="h-screen overflow-y-auto">{children}</main>;
+    return <main className="h-app overflow-y-auto">{children}</main>;
   }
 
   return (
     <AgentCommentProvider>
-      <div className="flex flex-col h-screen overflow-hidden overscroll-none">
+      <div className="flex flex-col h-app overflow-hidden overscroll-none">
         <div className="shrink-0">
           <Header />
         </div>
