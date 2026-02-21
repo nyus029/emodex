@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import AuthTestSetComponent from '@/components/auth/AuthTestSetComponent';
 import AdminEmoSection from '@/features/admin/AdminEmoSection';
 
 type AdminOverviewResponse = {
@@ -211,8 +210,6 @@ export default function AdminFeature() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6 sm:py-10 pb-24">
-      <AuthTestSetComponent />
-
       <section className="rounded-xl border p-5">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>

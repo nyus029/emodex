@@ -18,12 +18,12 @@ export default function ChatForm({
       <textarea
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="min-h-28 rounded border border-zinc-300 p-3"
+        className="min-h-28 rounded-lg border border-gray-200 p-3 text-sm text-gray-900"
       />
       <button
         type="submit"
         disabled={isLoading}
-        className="w-fit rounded bg-black px-4 py-2 text-white disabled:opacity-50"
+        className="w-fit rounded-lg bg-green px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
       >
         {isLoading ? 'Streaming...' : 'Send'}
       </button>
