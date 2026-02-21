@@ -11,9 +11,9 @@ const navItems = [
     icon: '/home.svg',
   },
   {
-    name: 'INSIGHT',
-    href: '/insight',
-    icon: '/insight.svg',
+    name: 'ALBUM',
+    href: '/album',
+    icon: '/album.svg',
   },
   {
     name: 'INVEST',
