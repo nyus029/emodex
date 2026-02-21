@@ -12,6 +12,7 @@ import type { RouteContext } from '@/types/api';
 
 const dividendSchema = z.object({
   action: z.enum(['REINVEST', 'RECEIVE']),
+  photoStorageId: z.string().optional(),
 });
 
 export async function POST(
@@ -37,11 +38,34 @@ export async function POST(
   const parsed = parseBody(rawBody, dividendSchema);
   if (parsed.error) return parsed.error;
 
-  const { action } = parsed.data;
+  const { action, photoStorageId } = parsed.data;
 
-  const activeStorages = await prisma.photoStorage.findMany({
-    where: { albumId: id, isCompoundActive: true },
-  });
+  let activeStorages;
+
+  if (photoStorageId) {
+    const storage = await prisma.photoStorage.findFirst({
+      where: { id: photoStorageId, albumId: id, isCompoundActive: true },
+    });
+    if (!storage) {
+      return jsonError('Photo storage not found or not active', 404);
+    }
+
+    const existingEvent = await prisma.dividendEvent.findFirst({
+      where: {
+        photoStorageId,
+        executedAt: { gte: album.plannedDividend! },
+      },
+    });
+    if (existingEvent) {
+      return jsonError('Dividend already executed for this storage', 409);
+    }
+
+    activeStorages = [storage];
+  } else {
+    activeStorages = await prisma.photoStorage.findMany({
+      where: { albumId: id, isCompoundActive: true },
+    });
+  }
 
   if (activeStorages.length === 0) {
     return jsonError('No active photo storages in this album', 400);
