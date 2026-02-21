@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import React from 'react';
 import SpeechBubble from '@/components/speechbubble';
+import { useAgentComment } from '@/lib/agent-comment-context';
 
 type HeaderProps = {
   title?: string;
@@ -12,6 +13,8 @@ type HeaderProps = {
   onAvatarClick?: () => void;
 };
 
+const DEFAULT_BUBBLE_TEXT = 'エージェントからのコメントが表示される';
+
 export default function Header({
   title = 'Emodex',
   subtitle = 'EMOI × INDEX',
@@ -19,6 +22,7 @@ export default function Header({
   onBellClick,
   onAvatarClick,
 }: HeaderProps) {
+  const { agentComment } = useAgentComment();
   return (
     <div>
       {/* Header */}
@@ -120,7 +124,7 @@ export default function Header({
 
             {/* 吹き出し */}
             <SpeechBubble
-              text="エージェントからのコメントが表示される"
+              text={agentComment || DEFAULT_BUBBLE_TEXT}
               className="w-full"
             />
           </div>
