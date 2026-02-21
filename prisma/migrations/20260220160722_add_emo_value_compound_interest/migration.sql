@@ -5,15 +5,15 @@
 
 */
 -- AlterTable
-ALTER TABLE `PhotoStorage` ADD COLUMN `baseEmoPerPhoto` INTEGER NOT NULL DEFAULT 100,
-    ADD COLUMN `compoundStartDate` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    ADD COLUMN `isCompoundActive` BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE `PhotoStorage` ADD COLUMN IF NOT EXISTS `baseEmoPerPhoto` INTEGER NOT NULL DEFAULT 100,
+    ADD COLUMN IF NOT EXISTS `compoundStartDate` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    ADD COLUMN IF NOT EXISTS `isCompoundActive` BOOLEAN NOT NULL DEFAULT true;
 
 -- DropTable
 DROP TABLE IF EXISTS `PhotoStorage_old`;
 
 -- CreateTable
-CREATE TABLE `EmoSnapshot` (
+CREATE TABLE IF NOT EXISTS `EmoSnapshot` (
     `id` VARCHAR(191) NOT NULL,
     `photoStorageId` VARCHAR(191) NOT NULL,
     `snapshotDate` DATE NOT NULL,
@@ -26,7 +26,7 @@ CREATE TABLE `EmoSnapshot` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `DividendEvent` (
+CREATE TABLE IF NOT EXISTS `DividendEvent` (
     `id` VARCHAR(191) NOT NULL,
     `albumId` VARCHAR(191) NOT NULL,
     `photoStorageId` VARCHAR(191) NOT NULL,

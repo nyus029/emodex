@@ -1,4 +1,4 @@
-DROP TABLE `SystemAdministrator`;
+DROP TABLE IF EXISTS `SystemAdministrator`;
 
 CREATE TABLE `SystemAdministrator` (
   `id` VARCHAR(191) NOT NULL,
