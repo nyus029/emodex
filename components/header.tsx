@@ -4,6 +4,7 @@ import Image from 'next/image';
 import React from 'react';
 import SpeechBubble from '@/components/speechbubble';
 import { useAgentComment } from '@/lib/agent-comment-context';
+import { useUser } from '@auth0/nextjs-auth0/client';
 
 type HeaderProps = {
   title?: string;
@@ -18,11 +19,19 @@ const DEFAULT_BUBBLE_TEXT = 'エージェントからのコメントが表示さ
 export default function Header({
   title = 'Emodex',
   subtitle = 'EMOI × INDEX',
-  avatarSrc = '/avatar.svg',
+  avatarSrc = '/users.svg',
   onBellClick,
   onAvatarClick,
 }: HeaderProps) {
   const { agentComment } = useAgentComment();
+  const { user } = useUser();
+  const [currentAvatarSrc, setCurrentAvatarSrc] =
+    React.useState<string>(avatarSrc);
+
+  React.useEffect(() => {
+    setCurrentAvatarSrc(user?.picture ?? avatarSrc);
+  }, [user?.picture, avatarSrc]);
+
   return (
     <div>
       {/* Header */}
@@ -86,11 +95,13 @@ export default function Header({
                 className="h-10 w-10 rounded-full overflow-hidden border hover:opacity-90"
               >
                 <Image
-                  src={avatarSrc}
+                  src={currentAvatarSrc}
                   alt="avatar"
                   width={40}
                   height={40}
                   className="h-10 w-10 object-cover"
+                  unoptimized={true}
+                  onError={() => setCurrentAvatarSrc('/users.svg')}
                 />
               </button>
             </div>
