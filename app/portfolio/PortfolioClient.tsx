@@ -161,13 +161,14 @@ export default function PortfolioClient({
         return;
       }
 
+      const verifiedUser = body.user;
       setMembers((prev) => [
         ...prev,
         {
           id: `${email}-${prev.length}`,
-          name: body.user.name,
+          name: verifiedUser.name,
           email,
-          picture: body.user.picture,
+          picture: verifiedUser.picture,
         },
       ]);
       setMemberEmail('');
