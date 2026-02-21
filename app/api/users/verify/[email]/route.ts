@@ -19,7 +19,22 @@ export async function GET(
 
   const email = parsed.data.email.toLowerCase();
 
-  const exists = Boolean(await prisma.user.findUnique({ where: { email } }));
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: { name: true, picture: true },
+  });
+  const exists = Boolean(user);
 
-  return NextResponse.json({ exists }, { status: 200 });
+  return NextResponse.json(
+    {
+      exists,
+      user: user
+        ? {
+            name: user.name,
+            picture: user.picture,
+          }
+        : null,
+    },
+    { status: 200 },
+  );
 }
