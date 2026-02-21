@@ -10,25 +10,23 @@ export default function NotificationTest({
   onTest,
 }: NotificationTestProps) {
   return (
-    <section className="rounded border border-zinc-300 p-4">
-      <h2 className="mb-2 font-semibold">
-        通知テスト（通常Web / PWA Push切替）
-      </h2>
-      <p className="mb-3 text-sm text-zinc-600 dark:text-zinc-300">
+    <section>
+      <h2 className="mb-1 text-[13px] font-medium text-gray-900">通知テスト</h2>
+      <p className="mb-3 text-[13px] text-gray-500">
         通常ブラウザでは Web通知、PWA standalone では Service Worker
         経由の通知を送信します。
       </p>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-3">
         <input
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="w-full rounded border border-zinc-300 px-3 py-2"
+          className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900"
           placeholder="通知本文"
         />
         <button
           type="button"
           onClick={onTest}
-          className="w-fit rounded bg-zinc-800 px-4 py-2 text-white"
+          className="w-fit rounded-lg bg-green px-4 py-2 text-sm font-medium text-white"
         >
           通知テスト
         </button>

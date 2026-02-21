@@ -189,8 +189,10 @@ describe('albums UI', () => {
       />,
     );
 
-    expect(screen.getByText('名前: 家族アルバム')).toBeInTheDocument();
-    expect(screen.getByText('ストレージ数: 1')).toBeInTheDocument();
+    expect(screen.getByText('名前')).toBeInTheDocument();
+    expect(screen.getByText('家族アルバム')).toBeInTheDocument();
+    expect(screen.getByText('ストレージ数')).toBeInTheDocument();
+    expect(screen.getByText('1')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'a.jpg' })).toHaveAttribute(
       'href',
       'https://example.com/a.jpg',
