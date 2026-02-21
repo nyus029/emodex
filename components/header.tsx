@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import React from 'react';
+import Link from 'next/link';
 import SpeechBubble from '@/components/speechbubble';
 import { useAgentComment } from '@/lib/agent-comment-context';
 import { useUser } from '@auth0/nextjs-auth0/client';
@@ -32,6 +33,15 @@ export default function Header({
     setCurrentAvatarSrc(user?.picture ?? avatarSrc);
   }, [user?.picture, avatarSrc]);
 
+  const handleAvatarClick = () => {
+    if (onAvatarClick) {
+      onAvatarClick();
+      return;
+    }
+
+    window.location.href = user ? '/auth/logout' : '/auth/login';
+  };
+
   return (
     <div>
       {/* Header */}
@@ -41,13 +51,15 @@ export default function Header({
           <div className="flex items-center justify-between">
             {/* Left */}
             <div className="flex items-center gap-3">
-              <Image
-                src="/icon.svg"
-                width={40}
-                height={40}
-                alt="Emodex logo"
-                className="h-10 w-10"
-              />
+              <Link href="/" aria-label="ホームに戻る" className="block">
+                <Image
+                  src="/icon.svg"
+                  width={40}
+                  height={40}
+                  alt="Emodex logo"
+                  className="h-10 w-10"
+                />
+              </Link>
 
               <div className="leading-tight">
                 <div className="text-lg font-semibold text-gray-900">
@@ -93,7 +105,7 @@ export default function Header({
 
               <button
                 type="button"
-                onClick={onAvatarClick}
+                onClick={handleAvatarClick}
                 className="h-11 w-11 rounded-full overflow-hidden border hover:opacity-90 flex items-center justify-center"
               >
                 <Image
