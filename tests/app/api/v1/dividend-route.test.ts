@@ -226,9 +226,15 @@ const fakePrisma = {
           );
           return {
             ...e,
-            album: album ? { id: album.id, name: album.name } : null,
+            album: album
+              ? { id: album.id, name: album.name, albumType: album.albumType }
+              : null,
             photoStorage: storage
-              ? { id: storage.id, name: storage.name }
+              ? {
+                  id: storage.id,
+                  name: storage.name,
+                  photos: storage.photos ?? [],
+                }
               : null,
           };
         });
