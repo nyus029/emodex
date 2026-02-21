@@ -76,6 +76,52 @@ describe('InsightFeature', () => {
     }) as jest.Mock;
   });
 
+  it('shows 0 emo message and link to overview when insight has emoValue 0', async () => {
+    (global.fetch as jest.Mock).mockImplementation(
+      (input: RequestInfo | URL) => {
+        const url = typeof input === 'string' ? input : (input as Request).url;
+        if (url.includes('/insight/') && !url.includes('/chart')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              albumBasicInfo: {
+                name: 'Zero Emo Album',
+                createdAt: '2026-01-15',
+                plannedDividend: null,
+              },
+              emoValueInfo: {
+                emoValue: 0,
+                dayOverDayChange: { value: 0, percentage: 0 },
+              },
+              photoStorages: [],
+            }),
+          });
+        }
+        if (url.includes('/chart')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ period: '1M', data: [] }),
+          });
+        }
+        return Promise.reject(new Error('Unexpected fetch'));
+      },
+    );
+
+    render(<InsightFeature albumId={albumId} />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('0 emo のため表示できません。'),
+      ).toBeInTheDocument();
+    });
+    expect(
+      screen.getByRole('link', { name: 'インサイト一覧へ戻る' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'インサイト一覧へ戻る' }),
+    ).toHaveAttribute('href', '/insight');
+  });
+
   it('displays photo storages section with names and counts when data includes photoStorages', async () => {
     render(<InsightFeature albumId={albumId} />);
 

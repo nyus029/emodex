@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import EmoChart, { type ChartDataPoint } from '@/components/invests/EmoChart';
 import PeriodTabs, { type Period } from '@/components/invests/PeriodTabs';
@@ -121,6 +122,7 @@ export default function InsightFeature({ albumId }: InsightFeatureProps) {
         events?: Array<{ id: string }>;
       } | null;
       if (body?.events?.length) {
+        await fetchInsight();
         handleReceiveSuccess(body.events.map((e) => e.id));
       } else {
         handleDividendComplete();
@@ -157,6 +159,7 @@ export default function InsightFeature({ albumId }: InsightFeatureProps) {
         events?: Array<{ id: string }>;
       } | null;
       if (body?.events?.length) {
+        await fetchInsight();
         handleReceiveSuccess(body.events.map((e) => e.id));
       } else {
         handleDividendComplete();
@@ -175,6 +178,23 @@ export default function InsightFeature({ albumId }: InsightFeatureProps) {
       <div className="min-h-screen bg-background-light p-5">
         <div className="mx-auto max-w-md rounded-xl bg-white px-4 py-3 shadow-card">
           <p className="text-sm text-red-600">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const emoValueForDisplay = insight?.emoValueInfo.emoValue ?? 0;
+  if (insight && emoValueForDisplay <= 0) {
+    return (
+      <div className="min-h-screen bg-background-light p-5">
+        <div className="mx-auto max-w-md rounded-xl bg-white px-4 py-6 shadow-card text-center">
+          <p className="text-sm text-gray-600">0 emo のため表示できません。</p>
+          <Link
+            href="/insight"
+            className="mt-3 inline-block text-sm text-green underline"
+          >
+            インサイト一覧へ戻る
+          </Link>
         </div>
       </div>
     );
