@@ -7,6 +7,8 @@ interface DividendActionPanelProps {
   plannedDividend: string | null;
   emoValue: number;
   onComplete: () => void;
+  /** 配当受取成功時に呼ばれる。作成された配当イベントIDの配列を渡す。遷移先は呼び出し側で /dividend/[id] などに使える。 */
+  onReceiveSuccess?: (eventIds: string[]) => void;
 }
 
 export default function DividendActionPanel({
@@ -14,6 +16,7 @@ export default function DividendActionPanel({
   plannedDividend,
   emoValue,
   onComplete,
+  onReceiveSuccess,
 }: DividendActionPanelProps) {
   const [confirming, setConfirming] = useState<'REINVEST' | 'RECEIVE' | null>(
     null,
@@ -49,8 +52,15 @@ export default function DividendActionPanel({
           (body as { error?: string }).error ?? 'Failed to execute dividend',
         );
       }
+      const body = (await res.json().catch(() => null)) as {
+        events?: Array<{ id: string }>;
+      } | null;
       setConfirming(null);
-      onComplete();
+      if (action === 'RECEIVE' && body?.events?.length && onReceiveSuccess) {
+        onReceiveSuccess(body.events.map((e) => e.id));
+      } else {
+        onComplete();
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unknown error');
     } finally {

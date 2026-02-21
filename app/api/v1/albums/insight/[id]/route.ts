@@ -25,7 +25,11 @@ export async function GET(
 
   const photoStorages = await prisma.photoStorage.findMany({
     where: { albumId: id },
+    orderBy: { createdAt: 'asc' },
     select: {
+      id: true,
+      name: true,
+      storagePath: true,
       photoCount: true,
       baseEmoPerPhoto: true,
       compoundStartDate: true,
@@ -48,5 +52,11 @@ export async function GET(
       emoValue: roundEmo(emoValue),
       dayOverDayChange,
     },
+    photoStorages: photoStorages.map((s) => ({
+      id: s.id,
+      name: s.name,
+      storagePath: s.storagePath,
+      photoCount: s.photoCount,
+    })),
   });
 }
