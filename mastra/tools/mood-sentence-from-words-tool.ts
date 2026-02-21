@@ -1,18 +1,7 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { mastra } from '@/mastra';
-
-const MOOD_PROMPT_TEMPLATE = (wordList: string[]) =>
-  `以下の単語を全て含む、ユーザーの考え・心象（気持ちや心理状態）を表す日本語の文章を1文だけ作成してください。
-「ユーザーはこう考えている」「こういう心象です」という形で、その人の内面が伝わるように書いてください。
-
-単語: ${wordList.join(', ')}
-
-要件:
-- すべての単語を含めてください
-- 自然で意味のある、心象が伝わる1文にしてください
-- 1文だけ生成し、句点で終わってください
-- 文章のみを出力し、説明や余計な文言は付けないでください`;
+import { MOOD_SENTENCE_PROMPT } from '@/mastra/prompts/mood-prompts';
 
 const NO_KEY_MESSAGE =
   'OPENAI_API_KEYを設定すると、選択した単語から心象を表す文章が生成されます。';
@@ -58,7 +47,7 @@ export const moodSentenceFromWordsTool = createTool({
 
     try {
       const stream = await agent.stream([
-        { role: 'user', content: MOOD_PROMPT_TEMPLATE(safeWords) },
+        { role: 'user', content: MOOD_SENTENCE_PROMPT(safeWords) },
       ]);
       const raw = await stream.text;
       if (stream.error) {

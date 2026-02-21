@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MOOD_SENTENCE_PROMPT } from '@/mastra/prompts/mood-prompts';
 
 const encoder = new TextEncoder();
 
@@ -10,18 +11,6 @@ async function getMastra() {
 const bodySchema = z.object({
   words: z.array(z.string()).min(1, 'At least one word is required'),
 });
-
-const PROMPT_TEMPLATE = (wordList: string[]) =>
-  `以下の単語を全て含む、意味の通った日本語の文章を1文だけ作成してください。
-単語: ${wordList.join(', ')}
-
-要件:
-- すべての単語を含めてください
-- 自然で意味のある文章にしてください
-- 1文だけ生成してください
-- 句点で終わってください
-
-文章のみを出力してください。`;
 
 export async function POST(request: Request) {
   const parsed = bodySchema.safeParse(await request.json().catch(() => ({})));
@@ -79,7 +68,7 @@ export async function POST(request: Request) {
 
   try {
     const stream = await agent.stream([
-      { role: 'user', content: PROMPT_TEMPLATE(wordList) },
+      { role: 'user', content: MOOD_SENTENCE_PROMPT(wordList) },
     ]);
 
     const textStream = new ReadableStream<Uint8Array>({
