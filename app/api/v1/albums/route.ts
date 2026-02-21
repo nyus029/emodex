@@ -81,6 +81,7 @@ export async function GET() {
     groupId: album.groupId,
     groupName: album.group?.groupName ?? null,
     createdTags: toTagArray(album.createdTags),
+    storageTags: toTagArray(album.storageTags),
     photoStorageCount: album._count.photoStorages,
   });
 

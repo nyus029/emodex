@@ -5,6 +5,7 @@ import {
   resolveStoragePath,
   sumFileSize,
 } from '@/lib/photo-storage';
+import { toTagArray } from '@/lib/albums';
 import {
   requireAuth,
   parseBody,
@@ -48,27 +49,46 @@ export async function POST(
       return jsonError('Invalid storage path', 400);
     }
 
-    const createdPhotoStorage = await prisma.photoStorage.create({
-      data: {
-        albumId: id,
-        name: parsed.data.name,
-        storagePath,
-        photoCount: parsed.data.files.length,
-        totalSizeBytes,
-        tags: parsed.data.tags ?? [],
-        photos: {
-          create: parsed.data.files.map((file) => ({
-            fileName: file.fileName,
-            blobPath: file.blobPath,
-            blobUrl: file.blobUrl,
-            contentType: file.contentType ?? null,
-            sizeBytes: BigInt(file.sizeBytes),
-          })),
+    const incomingTags = parsed.data.tags ?? [];
+
+    const [createdPhotoStorage] = await prisma.$transaction(async (tx) => {
+      const photoStorage = await tx.photoStorage.create({
+        data: {
+          albumId: id,
+          name: parsed.data.name,
+          storagePath,
+          photoCount: parsed.data.files.length,
+          totalSizeBytes,
+          tags: incomingTags,
+          photos: {
+            create: parsed.data.files.map((file) => ({
+              fileName: file.fileName,
+              blobPath: file.blobPath,
+              blobUrl: file.blobUrl,
+              contentType: file.contentType ?? null,
+              sizeBytes: BigInt(file.sizeBytes),
+            })),
+          },
         },
-      },
-      include: {
-        photos: true,
-      },
+        include: {
+          photos: true,
+        },
+      });
+
+      if (incomingTags.length > 0) {
+        const currentAlbum = await tx.album.findUnique({
+          where: { id },
+          select: { storageTags: true },
+        });
+        const existing = toTagArray(currentAlbum?.storageTags ?? null);
+        const merged = Array.from(new Set([...existing, ...incomingTags]));
+        await tx.album.update({
+          where: { id },
+          data: { storageTags: merged },
+        });
+      }
+
+      return [photoStorage];
     });
 
     return jsonSuccess(

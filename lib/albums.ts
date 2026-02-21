@@ -26,6 +26,7 @@ export type AlbumResponse = {
     createdAt: string;
     plannedDividend: string | null;
     createdTags: string[];
+    storageTags: string[];
     requiredAtAlbumCreation: boolean;
   };
   photoStorageSummary: {
@@ -61,6 +62,7 @@ export type AlbumListItem = {
   groupId: number | null;
   groupName: string | null;
   createdTags: string[];
+  storageTags: string[];
   photoStorageCount: number;
 };
 
@@ -109,6 +111,7 @@ export function toAlbumResponse(album: AlbumWithPhotoStorages): AlbumResponse {
       createdAt: album.createdAt.toISOString(),
       plannedDividend: album.plannedDividend?.toISOString() ?? null,
       createdTags: toTagArray(album.createdTags),
+      storageTags: toTagArray(album.storageTags),
       requiredAtAlbumCreation: album.requiredAtAlbumCreation,
     },
     photoStorageSummary: {

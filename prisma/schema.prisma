@@ -63,6 +63,7 @@ model Album {
   group                   Group?          @relation(fields: [groupId], references: [id], onDelete: SetNull)
   plannedDividend         DateTime?
   createdTags             Json?
+  storageTags             Json?
   requiredAtAlbumCreation Boolean         @default(false)
   createdAt               DateTime        @default(now())
   updatedAt               DateTime        @updatedAt

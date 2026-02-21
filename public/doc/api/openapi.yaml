@@ -1102,6 +1102,7 @@ components:
         - groupId
         - groupName
         - createdTags
+        - storageTags
         - photoStorageCount
       properties:
         id:
@@ -1132,6 +1133,14 @@ components:
           example:
             - 家族
             - 旅行
+        storageTags:
+          type: array
+          description: 各フォトストレージから集約されたタグの和集合（寄せ書き）
+          items:
+            type: string
+          example:
+            - 旅行
+            - イベント
         photoStorageCount:
           type: integer
           minimum: 0
@@ -1147,6 +1156,7 @@ components:
         - groupName
         - plannedDividend
         - createdTags
+        - storageTags
         - requiredAtAlbumCreation
       properties:
         albumName:
@@ -1185,6 +1195,14 @@ components:
             - 家族
             - 旅行
             - イベント
+        storageTags:
+          type: array
+          description: 各フォトストレージから集約されたタグの和集合（寄せ書き）
+          items:
+            type: string
+          example:
+            - 旅行
+            - 夏休み
         requiredAtAlbumCreation:
           type: boolean
           example: true
