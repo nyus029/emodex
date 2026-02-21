@@ -530,7 +530,7 @@ export default function HomeFeature() {
           管理者インターフェースへ移動
         </Link>
         <Link
-          href="/insight"
+          href="/album"
           className="text-sm underline hover:text-zinc-600 dark:hover:text-zinc-300"
         >
           指数関数グラフへ移動
