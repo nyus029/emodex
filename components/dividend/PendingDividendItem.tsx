@@ -14,6 +14,7 @@ interface PendingDividendItemProps {
   photoCount: number;
   emoValue: number;
   tags: string[];
+  thumbnailUrl: string | null;
   onComplete: () => void;
 }
 
@@ -27,6 +28,7 @@ export default function PendingDividendItem({
   photoCount,
   emoValue,
   tags,
+  thumbnailUrl,
   onComplete,
 }: PendingDividendItemProps) {
   const [confirming, setConfirming] = useState<'REINVEST' | 'RECEIVE' | null>(
@@ -39,6 +41,7 @@ export default function PendingDividendItem({
   );
 
   const isShared = albumType === 'SHARED';
+  const peopleIcon = isShared ? '/users.svg' : '/user.svg';
 
   async function handleAction(action: 'REINVEST' | 'RECEIVE') {
     setSubmitting(true);
@@ -131,17 +134,27 @@ export default function PendingDividendItem({
   return (
     <div className="grid gap-3 rounded-xl bg-white px-4 py-3 shadow-card">
       <div className="flex items-center gap-4">
-        <Image
-          src="/mockphoto.png"
-          alt="thumbnail"
-          width={64}
-          height={64}
-          className="h-16 w-16 shrink-0 rounded-xl object-cover"
-        />
+        {thumbnailUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={thumbnailUrl}
+            alt="thumbnail"
+            className="h-16 w-16 shrink-0 rounded-xl object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <Image
+            src="/mockphoto.png"
+            alt="thumbnail"
+            width={64}
+            height={64}
+            className="h-16 w-16 shrink-0 rounded-xl object-cover"
+          />
+        )}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <Image
-              src="/users.svg"
+              src={peopleIcon}
               alt="user"
               width={20}
               height={20}

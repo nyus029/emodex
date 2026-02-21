@@ -15,17 +15,20 @@ interface PendingItem {
   photoCount: number;
   emoValue: number;
   tags: string[];
+  thumbnailUrl: string | null;
 }
 
 interface ApprovalRequestItemData {
   approvalRequestId: string;
   albumId: string;
   albumName: string;
+  albumType: string;
   photoStorageId: string;
   photoStorageName: string;
   photoCount: number;
   emoValueAtRequest: number;
   tags: string[];
+  thumbnailUrl: string | null;
   requestedBy: { id: number; name: string };
   status: string;
   expiresAt: string;
@@ -39,11 +42,13 @@ interface CompletedItem {
   dividendEventId: string;
   albumId: string;
   albumName: string;
+  albumType: string;
   photoStorageId: string;
   photoStorageName: string;
   action: 'REINVEST' | 'RECEIVE';
   emoValueAtEvent: number;
   executedAt: string;
+  thumbnailUrl: string | null;
 }
 
 interface DividendListData {
@@ -108,10 +113,12 @@ export default function DividendListFeature() {
                   key={item.approvalRequestId}
                   approvalRequestId={item.approvalRequestId}
                   albumName={item.albumName}
+                  albumType={item.albumType}
                   photoStorageName={item.photoStorageName}
                   photoCount={item.photoCount}
                   emoValueAtRequest={item.emoValueAtRequest}
                   tags={item.tags}
+                  thumbnailUrl={item.thumbnailUrl}
                   requestedBy={item.requestedBy}
                   expiresAt={item.expiresAt}
                   approvedCount={item.approvedCount}
@@ -132,6 +139,7 @@ export default function DividendListFeature() {
                   photoCount={item.photoCount}
                   emoValue={item.emoValue}
                   tags={item.tags}
+                  thumbnailUrl={item.thumbnailUrl}
                   onComplete={fetchData}
                 />
               ))}
@@ -160,10 +168,12 @@ export default function DividendListFeature() {
                 key={item.dividendEventId}
                 dividendEventId={item.dividendEventId}
                 albumName={item.albumName}
+                albumType={item.albumType}
                 photoStorageName={item.photoStorageName}
                 action={item.action}
                 emoValueAtEvent={item.emoValueAtEvent}
                 executedAt={item.executedAt}
+                thumbnailUrl={item.thumbnailUrl}
               />
             ))
           ) : (
