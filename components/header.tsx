@@ -56,7 +56,7 @@ export default function Header({
     <div>
       {/* Header */}
       {/* pt-safe: iOS ノッチ・ステータスバー分の safe area を確保 */}
-      <header className="w-full shadow-card bg-white pt-safe">
+      <header className="w-full shadow-card bg-white pt-safe pl-safe pr-safe">
         <div className="mx-auto max-w-5xl px-4 py-3.5">
           <div className="flex items-center justify-between">
             {/* Left */}

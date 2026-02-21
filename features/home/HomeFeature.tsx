@@ -674,6 +674,9 @@ export default function HomeFeature() {
             {albumMessage}
           </p>
         ) : null}
+      </section>
+
+      <section className="grid gap-4 border-t pt-6">
         <AlbumDetailPanel album={album} />
       </section>
     </main>

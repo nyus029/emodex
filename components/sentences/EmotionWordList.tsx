@@ -20,10 +20,10 @@ export default function EmotionWordList({
             key={word}
             type="button"
             onClick={() => onToggle(word)}
-            className={`rounded-full px-3 py-1.5 text-sm transition-colors ${
+            className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
               isSelected
-                ? 'bg-zinc-800 text-white dark:bg-zinc-200 dark:text-zinc-900'
-                : 'border border-zinc-300 bg-white hover:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-800 dark:hover:bg-zinc-700'
+                ? 'bg-green text-white'
+                : 'bg-light-gray text-gray-500 hover:bg-gray-200'
             }`}
           >
             {word}

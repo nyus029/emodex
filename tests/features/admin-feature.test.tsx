@@ -5,11 +5,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import AdminFeature from '@/features/admin/AdminFeature';
 
-jest.mock('@/components/auth/AuthTestSetComponent', () => ({
-  __esModule: true,
-  default: () => <div>AuthTestSetComponentMock</div>,
-}));
-
 jest.mock('@/features/admin/AdminEmoSection', () => ({
   __esModule: true,
   default: () => <div>AdminEmoSectionMock</div>,
