@@ -70,14 +70,12 @@ export default function EmoChart({ data, loading }: EmoChartProps) {
   }, [data, loading]);
 
   if (loading) {
-    return (
-      <div className="h-[300px] animate-pulse rounded bg-zinc-200 dark:bg-zinc-700" />
-    );
+    return <div className="h-[300px] animate-pulse rounded-lg bg-gray-100" />;
   }
 
   if (data.length === 0) {
     return (
-      <div className="flex h-[300px] items-center justify-center text-sm text-zinc-400">
+      <div className="flex h-[300px] items-center justify-center text-sm text-gray-400">
         データがありません
       </div>
     );
