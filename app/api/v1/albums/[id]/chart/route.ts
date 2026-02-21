@@ -3,6 +3,7 @@ import { findAccessibleAlbum } from '@/lib/album-access';
 import { calculateAlbumEmo, type StorageParams } from '@/lib/emo-value';
 import { requireAuth, jsonSuccess, jsonError, roundEmo } from '@/lib/api-utils';
 import type { RouteContext } from '@/types/api';
+import { getMockChartData, isDbMockEnabled } from '@/lib/db-mock';
 
 const PERIOD_DAYS: Record<string, number> = {
   '1W': 7,
@@ -21,15 +22,23 @@ export async function GET(
 
   const { id } = await context.params;
 
-  const album = await findAccessibleAlbum(id, userId, userEmail ?? '');
-  if (!album) {
-    return jsonError('Album not found', 404);
-  }
-
   const url = new URL(request.url);
   const period = url.searchParams.get('period') ?? '1M';
   if (!['1W', '1M', '3M', '1Y', 'ALL'].includes(period)) {
     return jsonError('Invalid period', 400);
+  }
+
+  if (isDbMockEnabled()) {
+    const chart = getMockChartData(id, period);
+    if (!chart) {
+      return jsonError('Album not found', 404);
+    }
+    return jsonSuccess(chart);
+  }
+
+  const album = await findAccessibleAlbum(id, userId, userEmail ?? '');
+  if (!album) {
+    return jsonError('Album not found', 404);
   }
 
   const now = new Date();

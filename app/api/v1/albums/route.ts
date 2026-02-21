@@ -4,6 +4,11 @@ import { toAlbumResponse, toTagArray } from '@/lib/albums';
 import type { AlbumListItem } from '@/lib/albums';
 import { toPathSegment } from '@/lib/path';
 import {
+  createMockAlbum,
+  getMockAlbumList,
+  isDbMockEnabled,
+} from '@/lib/db-mock';
+import {
   requireAuth,
   parseBody,
   jsonSuccess,
@@ -32,6 +37,10 @@ export async function GET() {
   const auth = await requireAuth();
   if (auth.error) return auth.error;
   const { userId, userEmail } = auth.session;
+
+  if (isDbMockEnabled()) {
+    return jsonSuccess(getMockAlbumList());
+  }
 
   const ownAlbums = await prisma.album.findMany({
     where: { userId },
@@ -135,6 +144,19 @@ export async function POST(request: Request) {
     if (!membership) {
       return jsonError('You are not a member of this group', 403);
     }
+  }
+
+  if (isDbMockEnabled()) {
+    const album = createMockAlbum({
+      name,
+      albumType: resolvedAlbumType,
+      groupId,
+      plannedDividend,
+      createdTags,
+      requiredAtAlbumCreation,
+    });
+
+    return jsonSuccess(album, 201);
   }
 
   const rootPath = toPathSegment(name);

@@ -3,6 +3,7 @@ import { toAlbumResponse } from '@/lib/albums';
 import { findAccessibleAlbum } from '@/lib/album-access';
 import { requireAuth, jsonSuccess, jsonError } from '@/lib/api-utils';
 import type { RouteContext } from '@/types/api';
+import { getMockAlbumDetail, isDbMockEnabled } from '@/lib/db-mock';
 
 export async function GET(
   _request: Request,
@@ -13,6 +14,15 @@ export async function GET(
   const { userId, userEmail } = auth.session;
 
   const { id } = await context.params;
+
+  if (isDbMockEnabled()) {
+    const album = getMockAlbumDetail(id);
+    if (!album) {
+      return jsonError('Album not found', 404);
+    }
+
+    return jsonSuccess(album);
+  }
 
   const accessibleAlbum = await findAccessibleAlbum(
     id,

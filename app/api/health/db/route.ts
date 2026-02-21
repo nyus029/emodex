@@ -1,7 +1,15 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { isDbMockEnabled } from '@/lib/db-mock';
 
 export async function GET() {
+  if (isDbMockEnabled()) {
+    return NextResponse.json(
+      { message: 'Database mock mode enabled' },
+      { status: 200 },
+    );
+  }
+
   try {
     await prisma.$queryRaw`SELECT 1`;
 

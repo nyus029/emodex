@@ -5,6 +5,7 @@ import {
   resolveStoragePath,
   sumFileSize,
 } from '@/lib/photo-storage';
+import { addMockPhotoStorage, isDbMockEnabled } from '@/lib/db-mock';
 import {
   requireAuth,
   parseBody,
@@ -26,6 +27,14 @@ export async function POST(
   const rawBody = (await request.json().catch(() => null)) as unknown;
   const parsed = parseBody(rawBody, createPhotoStorageSchema);
   if (parsed.error) return parsed.error;
+
+  if (isDbMockEnabled()) {
+    const result = addMockPhotoStorage({ albumId: id, input: parsed.data });
+    if ('error' in result) {
+      return jsonError(result.error, 400);
+    }
+    return jsonSuccess(result, 201);
+  }
 
   const album = await findAccessibleAlbum(id, userId, userEmail ?? '');
 

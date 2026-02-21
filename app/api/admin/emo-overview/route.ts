@@ -5,10 +5,15 @@ import {
   calculateDayOverDayChange,
 } from '@/lib/emo-value';
 import { requireAdminAuth, jsonSuccess, roundEmo } from '@/lib/api-utils';
+import { getMockAdminEmoOverview, isDbMockEnabled } from '@/lib/db-mock';
 
 export async function GET() {
   const admin = await requireAdminAuth();
   if (admin.error) return admin.error;
+
+  if (isDbMockEnabled()) {
+    return jsonSuccess(getMockAdminEmoOverview());
+  }
 
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);

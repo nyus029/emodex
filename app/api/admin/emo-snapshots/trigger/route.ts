@@ -2,8 +2,21 @@ import { NextResponse } from 'next/server';
 import { auth0 } from '@/lib/auth0';
 import { getSystemAdministratorAccessByEmail } from '@/lib/system-administrators';
 import { createDailySnapshots } from '@/lib/emo-snapshots';
+import { createMockSnapshotRun, isDbMockEnabled } from '@/lib/db-mock';
 
 export async function POST() {
+  if (isDbMockEnabled()) {
+    const result = createMockSnapshotRun();
+    return NextResponse.json(
+      {
+        ok: true,
+        snapshotsUpserted: result.snapshotsUpserted,
+        date: result.date,
+      },
+      { status: 200 },
+    );
+  }
+
   const session = await auth0.getSession();
   const email = session?.user?.email;
   if (!email) {
