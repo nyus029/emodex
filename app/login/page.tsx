@@ -1,5 +1,5 @@
-import React from 'react';
+import LoginFeature from '@/features/auth/LoginFeature';
 
-export default function PortfolioPage() {
-  return <p>ログイン画面です</p>;
+export default function LoginPage() {
+  return <LoginFeature />;
 }
