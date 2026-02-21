@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 
 import Header from '@/components/header';
 import Footer from '@/components/footer';
+import { AgentCommentProvider } from '@/lib/agent-comment-context';
 
 type LayoutShellProps = {
   children: ReactNode;
@@ -21,14 +22,16 @@ export default function LayoutShell({ children }: LayoutShellProps) {
   }
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden overscroll-none">
-      <div className="shrink-0">
-        <Header />
+    <AgentCommentProvider>
+      <div className="flex flex-col h-screen overflow-hidden overscroll-none">
+        <div className="shrink-0">
+          <Header />
+        </div>
+        <main className="grow overflow-y-auto">{children}</main>
+        <div className="shrink-0">
+          <Footer />
+        </div>
       </div>
-      <main className="grow overflow-y-auto">{children}</main>
-      <div className="shrink-0">
-        <Footer />
-      </div>
-    </div>
+    </AgentCommentProvider>
   );
 }

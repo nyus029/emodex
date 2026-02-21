@@ -14,6 +14,7 @@ import NotificationTest from '@/components/notification/NotificationTest';
 import AuthTestSetComponent from '@/components/auth/AuthTestSetComponent';
 import type { AlbumResponse } from '@/lib/albums';
 import { toPathSegment } from '@/lib/path';
+import { useAgentComment } from '@/lib/agent-comment-context';
 
 const isPwaStandalone = () => {
   if (typeof window === 'undefined') return false;
@@ -49,6 +50,8 @@ export default function HomeFeature() {
   const [generatedSentence, setGeneratedSentence] = useState('');
   const [isSentenceGenerating, setIsSentenceGenerating] = useState(false);
   const SENTENCE_STORAGE_KEY = 'sentence-from-words-output';
+  const { clearAgentComment, appendAgentComment, setAgentComment } =
+    useAgentComment();
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -73,44 +76,67 @@ export default function HomeFeature() {
   const handleGenerateSentence = async () => {
     if (selectedWords.length === 0) return;
     setIsSentenceGenerating(true);
+    clearAgentComment();
     try {
-      const res = await fetch('/api/v1/sentences', {
+      const res = await fetch('/api/v1/sentences/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ words: selectedWords }),
       });
-      const raw = await res.json().catch(() => ({}));
-      const data = raw as
-        | { sentence: string }
-        | { error?: string; details?: string };
 
-      if (res.ok && 'sentence' in data && typeof data.sentence === 'string') {
-        const sentence = data.sentence.trim();
-        console.log('生成された文章:', sentence);
-        if (sentence) {
-          flushSync(() => setGeneratedSentence(sentence));
-          try {
-            localStorage.setItem(SENTENCE_STORAGE_KEY, sentence);
-          } catch {
-            // ignore
-          }
-        } else {
-          console.warn('API returned empty sentence');
-        }
-      } else {
+      if (!res.ok) {
+        const raw = await res.json().catch(() => ({}));
+        const data = raw as { error?: string; details?: string };
         const errorMsg =
-          (data && 'error' in data && typeof data.error === 'string'
-            ? data.error
-            : null) ||
-          (data && 'details' in data && typeof data.details === 'string'
+          (data?.error && typeof data.error === 'string' ? data.error : null) ||
+          (data?.details && typeof data.details === 'string'
             ? data.details
             : null) ||
           `HTTP ${res.status}`;
-        console.error('Sentence generation error:', res.status, data);
-        flushSync(() => setGeneratedSentence(`エラー: ${errorMsg}`));
+        const msg = `エラー: ${errorMsg}`;
+        setAgentComment(msg);
+        setGeneratedSentence(msg);
+        return;
+      }
+
+      const reader = res.body?.getReader();
+      if (!reader) {
+        setAgentComment('エラー: ストリームを開始できません');
+        setGeneratedSentence('エラー: ストリームを開始できません');
+        return;
+      }
+
+      const decoder = new TextDecoder();
+      let fullText = '';
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          fullText += chunk;
+          appendAgentComment(chunk);
+        }
+      } finally {
+        reader.releaseLock();
+      }
+
+      fullText = fullText.trim();
+      if (fullText) {
+        flushSync(() => setGeneratedSentence(fullText));
+        try {
+          localStorage.setItem(SENTENCE_STORAGE_KEY, fullText);
+        } catch {
+          // ignore
+        }
       }
     } catch (err) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : 'Sentence generation request failed';
       console.error('Sentence generation request failed:', err);
+      setAgentComment(`エラー: ${msg}`);
+      setGeneratedSentence(`エラー: ${msg}`);
     } finally {
       setIsSentenceGenerating(false);
     }
