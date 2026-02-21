@@ -37,7 +37,7 @@ export default function Footer() {
 
   return (
     // pb-safe: iOS ホームインジケーター分の safe area を確保
-    <footer className="bg-white shadow-card pb-safe">
+    <footer className="bg-white shadow-card pb-safe pl-safe pr-safe">
       <nav className="flex items-center h-18">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
