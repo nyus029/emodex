@@ -36,7 +36,7 @@ export default function Footer() {
   const pathname = usePathname();
 
   return (
-    <footer className="fixed bottom-0 left-0 right-0 bg-white shadow-card">
+    <footer className="bg-white shadow-card">
       <nav className="flex items-center h-18">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
