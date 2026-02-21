@@ -196,6 +196,29 @@ CRON_SECRET=
 | `Group`      | `id`, `groupName`, `adminUserId` → User, timestamps                                       |
 | `Membership` | `id`, `userId`, `groupId`, `role` (ADMIN\|MEMBER), timestamps; unique `(userId, groupId)` |
 
+### DB 停止 → 再起動手順
+
+```bash
+# 1. dev サーバーを停止 (Ctrl+C)
+
+# 2. MySQL コンテナを停止
+npm run db:down
+
+# 3. MySQL コンテナを起動
+npm run db:up
+
+# 4. Prisma クライアント再生成（スキーマ変更後は必須）
+npm run db:generate
+
+# 5. マイグレーション適用
+npm run db:migrate
+
+# 6. dev サーバー起動
+npm run dev
+```
+
+データを完全にリセットしたい場合は手順 2 を `docker compose down -v` に置き換える（ボリュームごと削除）。
+
 ### Migration Workflow
 
 ```bash
