@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 import { auth0 } from './lib/auth0';
 
 const isProduction = process.env.VERCEL_ENV === 'production';
@@ -8,7 +9,25 @@ export async function proxy(request: Request) {
   if (isProduction && isPreReleaseLocked) {
     return new NextResponse('Forbidden', { status: 403 });
   }
-  return await auth0.middleware(request);
+  const authResponse = await auth0.middleware(request);
+  const { pathname, search } = new URL(request.url);
+
+  if (
+    pathname.startsWith('/auth/') ||
+    pathname.startsWith('/api/') ||
+    pathname === '/login'
+  ) {
+    return authResponse;
+  }
+
+  const session = await auth0.getSession(request as NextRequest);
+  if (!session?.user) {
+    const loginUrl = new URL('/auth/login', request.url);
+    loginUrl.searchParams.set('returnTo', `${pathname}${search}`);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  return authResponse;
 }
 
 export const config = {
