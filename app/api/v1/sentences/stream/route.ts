@@ -22,10 +22,7 @@ const PROMPT_TEMPLATE = (wordList: string[]) =>
 export async function POST(request: Request) {
   const parsed = bodySchema.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) {
-    const msg =
-      typeof parsed.error.flatten().message === 'string'
-        ? parsed.error.flatten().message
-        : (parsed.error.message ?? 'Validation failed');
+    const msg = parsed.error.message ?? 'Validation failed';
     return Response.json({ error: msg }, { status: 400 });
   }
 
