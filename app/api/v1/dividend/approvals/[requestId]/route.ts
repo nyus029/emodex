@@ -136,7 +136,7 @@ export async function POST(
   const result = await approveRequest(prisma, requestId, dbUser.id);
 
   if ('error' in result) {
-    return jsonError(result.error, result.status);
+    return jsonError(result.error ?? 'Unknown error', result.status ?? 500);
   }
 
   if (result.type === 'executed') {
