@@ -260,25 +260,6 @@ export default function HomeFeature() {
   return (
     <div className="min-h-screen bg-background-light p-5">
       <main className="mx-auto grid max-w-md gap-4 pb-24">
-        {isAdmin && (
-          <section className="rounded-xl bg-white px-5 py-4 shadow-card">
-            <div className="flex flex-wrap gap-2">
-              <Link
-                href="/admin"
-                className="inline-flex rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50"
-              >
-                管理者インターフェースへ移動
-              </Link>
-              <Link
-                href="/insight"
-                className="inline-flex rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50"
-              >
-                指数関数グラフへ移動
-              </Link>
-            </div>
-          </section>
-        )}
-
         <section className="grid gap-4 rounded-xl bg-white px-4 py-4 shadow-card">
           <div>
             <h2 className="text-[15px] font-medium text-gray-900">
@@ -348,6 +329,25 @@ export default function HomeFeature() {
               topEmotions={topEmotions}
               loading={topEmotionsLoading}
             />
+          </section>
+        )}
+
+        {isAdmin && (
+          <section className="rounded-xl bg-white px-5 py-4 shadow-card">
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/admin"
+                className="inline-flex rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50"
+              >
+                管理者インターフェースへ移動
+              </Link>
+              <Link
+                href="/insight"
+                className="inline-flex rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50"
+              >
+                指数関数グラフへ移動
+              </Link>
+            </div>
           </section>
         )}
       </main>
