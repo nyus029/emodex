@@ -92,7 +92,7 @@ export default function DividendDetailFeature({
             </div>
           </div>
         ) : data ? (
-          <div>
+          <div className="space-y-4">
             <div className="rounded-xl bg-white px-4 py-3 shadow-card">
               <div className="flex items-center gap-4">
                 <Image
@@ -148,7 +148,7 @@ export default function DividendDetailFeature({
               </div>
             </div>
 
-            <section className="mt-8 grid grid-cols-3 gap-2">
+            <section className="grid grid-cols-3 gap-2">
               {photoSlots.map((photo, index) => (
                 <div
                   key={photo?.id ?? `placeholder-${index}`}
