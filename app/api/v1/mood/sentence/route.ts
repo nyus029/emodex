@@ -46,7 +46,7 @@ export async function POST(request: Request) {
       {},
     );
     moodSentence =
-      typeof moodResult.sentence === 'string'
+      'sentence' in moodResult && typeof moodResult.sentence === 'string'
         ? moodResult.sentence
         : '心象を表す文章を生成できませんでした。';
   } catch (err) {
@@ -60,10 +60,10 @@ export async function POST(request: Request) {
       const { emotionRecommendationTool } =
         await import('@/mastra/tools/emotion-recommendation-tool');
       if (emotionRecommendationTool.execute) {
-        const recResult = await emotionRecommendationTool.execute(
+        const recResult = (await emotionRecommendationTool.execute(
           { sentence: moodSentence },
           {},
-        );
+        )) as unknown as { recommendationText?: string };
         recommendationText =
           typeof recResult.recommendationText === 'string' &&
           recResult.recommendationText.trim().length > 0

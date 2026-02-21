@@ -50,7 +50,10 @@ export async function GET() {
         },
         {},
       );
-      suggested = result.suggested ?? [];
+      suggested =
+        result && 'suggested' in result && Array.isArray(result.suggested)
+          ? result.suggested
+          : [];
     }
   } catch (err) {
     console.error('Suggest albums by emotion error:', err);
