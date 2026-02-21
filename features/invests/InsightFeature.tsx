@@ -36,6 +36,17 @@ interface ChartResponse {
   data: ChartDataPoint[];
 }
 
+interface DividendHistoryItem {
+  dividendEventId: string;
+  albumId: string;
+  albumName: string;
+  photoStorageId: string;
+  photoStorageName: string;
+  action: 'REINVEST' | 'RECEIVE';
+  emoValueAtEvent: number;
+  executedAt: string;
+}
+
 interface InsightFeatureProps {
   albumId: string;
 }
@@ -53,6 +64,10 @@ export default function InsightFeature({ albumId }: InsightFeatureProps) {
   const [receiveSubmittingStorageId, setReceiveSubmittingStorageId] = useState<
     string | null
   >(null);
+  const [dividendHistory, setDividendHistory] = useState<DividendHistoryItem[]>(
+    [],
+  );
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   const fetchInsight = useCallback(async () => {
     setLoadingInsight(true);
@@ -92,9 +107,31 @@ export default function InsightFeature({ albumId }: InsightFeatureProps) {
     fetchChart();
   }, [fetchChart]);
 
+  const fetchDividendHistory = useCallback(async () => {
+    setLoadingHistory(true);
+    try {
+      const res = await fetch('/api/v1/dividend');
+      if (!res.ok) return;
+      const data = (await res.json()) as {
+        completed?: DividendHistoryItem[];
+      };
+      const completed = data.completed ?? [];
+      setDividendHistory(completed.filter((e) => e.albumId === albumId));
+    } catch {
+      setDividendHistory([]);
+    } finally {
+      setLoadingHistory(false);
+    }
+  }, [albumId]);
+
+  useEffect(() => {
+    fetchDividendHistory();
+  }, [fetchDividendHistory]);
+
   function handleDividendComplete() {
     fetchInsight();
     fetchChart();
+    fetchDividendHistory();
   }
 
   function handleReceiveSuccess(eventIds: string[]) {
@@ -131,6 +168,7 @@ export default function InsightFeature({ albumId }: InsightFeatureProps) {
           }
         }
         await fetchInsight();
+        fetchDividendHistory();
         handleReceiveSuccess(body.events.map((e) => e.id));
       } else {
         handleDividendComplete();
@@ -175,6 +213,7 @@ export default function InsightFeature({ albumId }: InsightFeatureProps) {
           }
         }
         await fetchInsight();
+        fetchDividendHistory();
         handleReceiveSuccess(body.events.map((e) => e.id));
       } else {
         handleDividendComplete();
@@ -345,6 +384,79 @@ export default function InsightFeature({ albumId }: InsightFeatureProps) {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* 配当受け取り履歴（ストレージごと） */}
+        {insight && (
+          <div className="rounded-xl bg-white px-4 py-3 shadow-card">
+            <h2 className="text-[13px] font-medium text-gray-900">
+              配当受け取り履歴
+            </h2>
+            {loadingHistory ? (
+              <p className="mt-2 text-[13px] text-gray-500">読み込み中...</p>
+            ) : dividendHistory.length === 0 ? (
+              <p className="mt-2 text-[13px] text-gray-500">
+                まだ履歴はありません。
+              </p>
+            ) : (
+              <div className="mt-2 space-y-4 text-[13px]">
+                {(() => {
+                  const byStorage = new Map<
+                    string,
+                    { name: string; events: DividendHistoryItem[] }
+                  >();
+                  for (const e of dividendHistory) {
+                    const cur = byStorage.get(e.photoStorageId);
+                    if (cur) {
+                      cur.events.push(e);
+                    } else {
+                      byStorage.set(e.photoStorageId, {
+                        name: e.photoStorageName,
+                        events: [e],
+                      });
+                    }
+                  }
+                  for (const [, v] of byStorage) {
+                    v.events.sort(
+                      (a, b) =>
+                        new Date(b.executedAt).getTime() -
+                        new Date(a.executedAt).getTime(),
+                    );
+                  }
+                  return Array.from(byStorage.entries()).map(
+                    ([storageId, { name, events }]) => (
+                      <div key={storageId}>
+                        <p className="font-medium text-gray-800">{name}</p>
+                        <ul className="mt-1.5 space-y-1.5 pl-0">
+                          {events.map((e) => (
+                            <li
+                              key={e.dividendEventId}
+                              className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-1.5 last:border-0 last:pb-0 text-[12px]"
+                            >
+                              <span className="text-gray-600">
+                                {new Date(e.executedAt).toLocaleDateString(
+                                  'ja-JP',
+                                )}{' '}
+                                {e.action === 'RECEIVE' ? '受取' : '再投資'}・
+                                {Math.round(e.emoValueAtEvent).toLocaleString()}{' '}
+                                emo
+                              </span>
+                              <Link
+                                href={`/dividend/${e.dividendEventId}`}
+                                className="shrink-0 text-xs text-green underline"
+                              >
+                                詳細
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ),
+                  );
+                })()}
+              </div>
+            )}
           </div>
         )}
       </div>
