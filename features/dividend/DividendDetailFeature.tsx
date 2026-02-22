@@ -1,5 +1,6 @@
 'use client';
 
+import FullscreenImageViewer from '@/components/dividend/FullscreenImageViewer';
 import Image from 'next/image';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -45,6 +46,7 @@ export default function DividendDetailFeature({
   const [reinvestSubmitting, setReinvestSubmitting] = useState(false);
   const [reinvestDone, setReinvestDone] = useState(false);
   const [reinvestError, setReinvestError] = useState<string | null>(null);
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -205,19 +207,32 @@ export default function DividendDetailFeature({
                       className="relative aspect-square"
                     >
                       {photo ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={photo.blobUrl}
-                          alt={photo.fileName}
-                          className="h-full w-full rounded-xl object-cover"
-                          loading="lazy"
-                        />
+                        <button
+                          type="button"
+                          className="h-full w-full"
+                          onClick={() => setViewerIndex(index)}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={photo.blobUrl}
+                            alt={photo.fileName}
+                            className="h-full w-full rounded-xl object-cover"
+                            loading="lazy"
+                          />
+                        </button>
                       ) : (
                         <div className="h-full w-full rounded-xl bg-white shadow-card" />
                       )}
                     </div>
                   ))}
                 </section>
+                {viewerIndex !== null && (
+                  <FullscreenImageViewer
+                    photos={photos}
+                    initialIndex={viewerIndex}
+                    onClose={() => setViewerIndex(null)}
+                  />
+                )}
               </>
             ) : (
               <div className="rounded-xl bg-white px-4 py-6 shadow-card text-center">
