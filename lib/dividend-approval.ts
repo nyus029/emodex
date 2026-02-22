@@ -1,5 +1,5 @@
 import type { PrismaClient } from '@prisma/client';
-import { calculatePhotoStorageEmo } from '@/lib/emo-value';
+import { executeDividendOnStorage } from '@/lib/dividend-execution';
 
 const APPROVAL_EXPIRY_DAYS = 7;
 
@@ -140,44 +140,32 @@ async function executeApprovedDividend(
   const result = await prisma.$transaction(async (tx) => {
     const req = await tx.dividendApprovalRequest.findUniqueOrThrow({
       where: { id: requestId },
-      include: { photoStorage: true },
+      include: {
+        photoStorage: true,
+        album: { select: { plannedDividend: true } },
+      },
     });
 
     const storage = req.photoStorage;
 
-    // Re-calculate emo value at execution time
-    const emoValue = calculatePhotoStorageEmo({
-      photoCount: storage.photoCount,
-      baseEmoPerPhoto: storage.baseEmoPerPhoto,
-      compoundStartDate: storage.compoundStartDate,
-      isCompoundActive: storage.isCompoundActive,
+    const execution = await executeDividendOnStorage(tx, {
+      albumId: req.albumId,
+      storage,
+      action: 'RECEIVE',
+      approvalRequestId: requestId,
+      enforceReceiveCooldown: false,
+      plannedDividend: req.album.plannedDividend,
     });
-
-    const previousBaseEmo = storage.baseEmoPerPhoto;
-
-    await tx.photoStorage.update({
-      where: { id: storage.id },
-      data: { isCompoundActive: false },
-    });
-
-    const event = await tx.dividendEvent.create({
-      data: {
-        albumId: req.albumId,
-        photoStorageId: storage.id,
-        action: 'RECEIVE',
-        emoValueAtEvent: emoValue,
-        previousBaseEmo,
-        newBaseEmo: 0,
-        approvalRequestId: requestId,
-      },
-    });
+    if (execution.status === 'skipped') {
+      throw new Error(`Dividend execution skipped: ${execution.reason}`);
+    }
 
     await tx.dividendApprovalRequest.update({
       where: { id: requestId },
       data: { status: 'APPROVED', completedAt: new Date() },
     });
 
-    return { event, storageName: storage.name, emoValue };
+    return { event: execution.event, storageName: storage.name };
   });
 
   return {

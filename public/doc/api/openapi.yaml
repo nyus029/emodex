@@ -1067,6 +1067,42 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/cron/dividend-auto-receive:
+    get:
+      tags:
+        - Cron
+      summary: Auto receive due dividends
+      description: Executes RECEIVE dividends for due active storages (plannedDividend <= now) when no RECEIVE event exists since planned dividend date. Also enforces the existing 7-day receive cooldown. Protected by CRON_SECRET.
+      responses:
+        '200':
+          description: Auto dividend receive completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  processedStorages:
+                    type: integer
+                    example: 10
+                  createdEvents:
+                    type: integer
+                    example: 8
+                  skippedReasonCounts:
+                    type: object
+                    additionalProperties:
+                      type: integer
+                    example:
+                      already_received_since_planned_dividend: 1
+                      receive_cooldown: 1
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/groups:
     get:
       tags:
