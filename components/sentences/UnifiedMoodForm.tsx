@@ -61,11 +61,8 @@ export default function UnifiedMoodForm({
           : isCooldown
             ? formatCooldown(cooldownSeconds)
             : isLoggedIn
-              ? '心象を記録する'
+              ? '気持ちを投稿する'
               : '文章を生成'}
-          : isLoggedIn
-            ? '気持ちを投稿する'
-            : '文章を生成'}
       </button>
     </div>
   );
