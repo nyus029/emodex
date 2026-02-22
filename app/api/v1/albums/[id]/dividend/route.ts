@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { findAccessibleAlbum } from '@/lib/album-access';
 import { calculatePhotoStorageEmo } from '@/lib/emo-value';
 import { createApprovalRequest } from '@/lib/dividend-approval';
+import { isDividendAvailableOnDate } from '@/lib/dividend-schedule';
 import {
   requireAuth,
   parseBody,
@@ -31,6 +32,14 @@ export async function POST(
   const album = await findAccessibleAlbum(id, userId, userEmail ?? '');
   if (!album) {
     return jsonError('Album not found', 404);
+  }
+
+  const now = new Date();
+  if (!isDividendAvailableOnDate(album.plannedDividend, now)) {
+    return jsonError(
+      'Dividend is not available yet. plannedDividend must be today or earlier (UTC date basis).',
+      400,
+    );
   }
 
   const rawBody = (await request.json().catch(() => null)) as unknown;

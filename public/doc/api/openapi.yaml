@@ -780,7 +780,7 @@ paths:
       tags:
         - Albums
       summary: Execute dividend action
-      description: Execute a dividend reinvest or receive action on an album that has reached its planned dividend date.
+      description: Execute a dividend reinvest or receive action on an album that has reached its planned dividend date (compared by UTC calendar date).
       parameters:
         - name: id
           in: path
@@ -802,11 +802,16 @@ paths:
               schema:
                 $ref: '#/components/schemas/DividendActionResponse'
         '400':
-          description: Invalid request or dividend date not reached
+          description: Invalid request, missing plannedDividend, or planned dividend date not reached (UTC date basis)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                plannedDividendNotReady:
+                  summary: plannedDividend is null or in the future
+                  value:
+                    error: Dividend is not available yet. plannedDividend must be today or earlier (UTC date basis).
         '401':
           description: Unauthorized
           content:
@@ -830,7 +835,7 @@ paths:
       tags:
         - Dividend
       summary: List pending and completed dividends
-      description: Returns pending (actionable) dividend items, approval requests awaiting member consent, and completed dividend items for all accessible albums.
+      description: Returns pending (actionable) dividend items, approval requests awaiting member consent, and completed dividend items for all accessible albums. Pending determination uses UTC calendar-date comparison between `plannedDividend` and current date.
       responses:
         '200':
           description: Dividend list

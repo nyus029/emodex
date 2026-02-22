@@ -1,6 +1,10 @@
 import { prisma } from '@/lib/prisma';
 import { findUserAlbumsWithShared } from '@/lib/album-queries';
 import { calculatePhotoStorageEmo } from '@/lib/emo-value';
+import {
+  isDividendAvailableOnDate,
+  isExecutedOnOrAfterPlannedDividendDate,
+} from '@/lib/dividend-schedule';
 import { requireAuth, jsonSuccess, roundEmo } from '@/lib/api-utils';
 
 export async function GET() {
@@ -74,13 +78,16 @@ export async function GET() {
   }> = [];
 
   for (const album of pendingAlbums) {
-    if (!album.plannedDividend || album.plannedDividend > now) continue;
+    if (!isDividendAvailableOnDate(album.plannedDividend, now)) continue;
 
     for (const storage of album.photoStorages) {
       const hasEvent = album.dividendEvents.some(
         (e) =>
           e.photoStorageId === storage.id &&
-          e.executedAt >= album.plannedDividend!,
+          isExecutedOnOrAfterPlannedDividendDate(
+            e.executedAt,
+            album.plannedDividend!,
+          ),
       );
       if (hasEvent) continue;
 
