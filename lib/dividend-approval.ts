@@ -1,5 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
 import { calculatePhotoStorageEmo } from '@/lib/emo-value';
+import { executeDueDividends } from '@/lib/dividend-execution';
 
 const APPROVAL_EXPIRY_DAYS = 7;
 
@@ -140,7 +141,7 @@ async function executeApprovedDividend(
   const result = await prisma.$transaction(async (tx) => {
     const req = await tx.dividendApprovalRequest.findUniqueOrThrow({
       where: { id: requestId },
-      include: { photoStorage: true },
+      include: { photoStorage: true, album: true },
     });
 
     const storage = req.photoStorage;
@@ -177,7 +178,21 @@ async function executeApprovedDividend(
       data: { status: 'APPROVED', completedAt: new Date() },
     });
 
-    return { event, storageName: storage.name, emoValue };
+    return {
+      event,
+      storageName: storage.name,
+      albumType: req.album.albumType,
+      groupId: req.album.groupId,
+      requestedByUserId: req.requestedByUserId,
+      emoValue,
+    };
+  });
+
+  await executeDueDividends(prisma, {
+    events: [{ id: result.event.id, photoStorageName: result.storageName }],
+    albumType: result.albumType,
+    groupId: result.groupId,
+    initiatedByDbUserId: result.requestedByUserId,
   });
 
   return {

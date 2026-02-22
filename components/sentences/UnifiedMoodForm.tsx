@@ -63,6 +63,9 @@ export default function UnifiedMoodForm({
             : isLoggedIn
               ? '心象を記録する'
               : '文章を生成'}
+          : isLoggedIn
+            ? '気持ちを投稿する'
+            : '文章を生成'}
       </button>
     </div>
   );

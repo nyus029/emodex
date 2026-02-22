@@ -1,5 +1,6 @@
 'use client';
 
+import FullscreenImageViewer from '@/components/dividend/FullscreenImageViewer';
 import Image from 'next/image';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -26,6 +27,7 @@ interface DividendDetailData {
     photoCount: number;
     isCompoundActive: boolean;
     tags: string[];
+    thumbnailUrl: string | null;
     photosVisible: boolean;
     photosExpireAt: string | null;
     photos: Photo[];
@@ -45,6 +47,7 @@ export default function DividendDetailFeature({
   const [reinvestSubmitting, setReinvestSubmitting] = useState(false);
   const [reinvestDone, setReinvestDone] = useState(false);
   const [reinvestError, setReinvestError] = useState<string | null>(null);
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -109,9 +112,6 @@ export default function DividendDetailFeature({
 
   const photosVisible = data?.photoStorage.photosVisible ?? false;
   const photos = photosVisible ? (data?.photoStorage.photos ?? []) : [];
-  const photoSlots = Array.from({ length: 9 }).map(
-    (_, index) => photos[index] ?? null,
-  );
   const formattedExecutedAt = data
     ? new Date(data.dividendEvent.executedAt).toLocaleDateString('ja-JP')
     : '';
@@ -135,13 +135,23 @@ export default function DividendDetailFeature({
           <div className="space-y-4">
             <div className="rounded-xl bg-white px-4 py-3 shadow-card">
               <div className="flex items-center gap-4">
-                <Image
-                  src="/mockphoto.png"
-                  alt="thumbnail"
-                  width={64}
-                  height={64}
-                  className="h-16 w-16 shrink-0 rounded-xl object-cover"
-                />
+                {data.photoStorage.thumbnailUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={data.photoStorage.thumbnailUrl}
+                    alt="thumbnail"
+                    className="h-16 w-16 shrink-0 rounded-xl object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <Image
+                    src="/mockphoto.png"
+                    alt="thumbnail"
+                    width={64}
+                    height={64}
+                    className="h-16 w-16 shrink-0 rounded-xl object-cover"
+                  />
+                )}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <Image
@@ -199,25 +209,31 @@ export default function DividendDetailFeature({
                   </p>
                 )}
                 <section className="grid grid-cols-3 gap-2">
-                  {photoSlots.map((photo, index) => (
-                    <div
-                      key={photo?.id ?? `placeholder-${index}`}
-                      className="relative aspect-square"
-                    >
-                      {photo ? (
-                        // eslint-disable-next-line @next/next/no-img-element
+                  {photos.map((photo, index) => (
+                    <div key={photo.id} className="relative aspect-square">
+                      <button
+                        type="button"
+                        className="h-full w-full"
+                        onClick={() => setViewerIndex(index)}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={photo.blobUrl}
                           alt={photo.fileName}
                           className="h-full w-full rounded-xl object-cover"
                           loading="lazy"
                         />
-                      ) : (
-                        <div className="h-full w-full rounded-xl bg-white shadow-card" />
-                      )}
+                      </button>
                     </div>
                   ))}
                 </section>
+                {viewerIndex !== null && (
+                  <FullscreenImageViewer
+                    photos={photos}
+                    initialIndex={viewerIndex}
+                    onClose={() => setViewerIndex(null)}
+                  />
+                )}
               </>
             ) : (
               <div className="rounded-xl bg-white px-4 py-6 shadow-card text-center">
