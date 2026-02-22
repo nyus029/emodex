@@ -263,11 +263,8 @@ export default function HomeFeature() {
         <section className="grid gap-4 rounded-xl bg-white px-4 py-4 shadow-card">
           <div>
             <h2 className="text-[15px] font-medium text-gray-900">
-              単語から文章
+              今日の気分は？
             </h2>
-            <p className="mt-1 text-[13px] text-gray-500">
-              感情ワードを選ぶか単語を追加して、文章を生成します。ログイン中は心象として保存し、感情に合うアルバムを提案できます。
-            </p>
           </div>
           <UnifiedMoodForm
             suggestedWords={suggestedWords.length > 0 ? suggestedWords : []}

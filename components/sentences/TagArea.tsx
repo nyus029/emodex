@@ -13,6 +13,10 @@ type TagAreaProps = {
   onRemoveCustom: (word: string) => void;
 };
 
+/** 選択時共通の色（気分を綴るボタンと揃える） */
+const SELECTED_BG = 'var(--color-green, #22c55e)';
+const SELECTED_TEXT = '#ffffff';
+
 export default function TagArea({
   suggestedWords,
   selectedSuggestedWords,
@@ -42,6 +46,8 @@ export default function TagArea({
           key={`s-${word}`}
           word={word}
           selected={selectedSuggestedWords.includes(word)}
+          selectedBg={SELECTED_BG}
+          selectedText={SELECTED_TEXT}
           onToggle={onToggleSuggested}
         />
       ))}
@@ -51,6 +57,8 @@ export default function TagArea({
           word={word}
           selected
           isCustom
+          selectedBg={SELECTED_BG}
+          selectedText={SELECTED_TEXT}
           onToggle={() => {}}
           onRemove={onRemoveCustom}
         />

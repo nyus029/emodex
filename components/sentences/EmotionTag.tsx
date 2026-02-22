@@ -1,11 +1,11 @@
 'use client';
 
-import { getTagColor } from './tag-colors';
-
 type EmotionTagProps = {
   word: string;
   selected: boolean;
   isCustom?: boolean;
+  selectedBg?: string;
+  selectedText?: string;
   onToggle: (word: string) => void;
   onRemove?: (word: string) => void;
 };
@@ -14,20 +14,25 @@ export default function EmotionTag({
   word,
   selected,
   isCustom,
+  selectedBg,
+  selectedText,
   onToggle,
   onRemove,
 }: EmotionTagProps) {
-  const color = getTagColor(word);
+  const style =
+    selected && selectedBg != null && selectedText != null
+      ? { backgroundColor: selectedBg, color: selectedText }
+      : undefined;
 
   return (
     <button
       type="button"
       onClick={() => onToggle(word)}
-      style={
-        selected ? { backgroundColor: color.bg, color: color.text } : undefined
-      }
+      style={style}
       className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-        selected ? '' : 'bg-light-gray text-gray-400 hover:bg-gray-200'
+        selected && selectedBg != null
+          ? ''
+          : 'bg-light-gray text-gray-400 hover:bg-gray-200'
       }`}
     >
       {word}
