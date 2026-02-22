@@ -15,6 +15,7 @@ interface InsightAlbum {
   groupName: string | null;
   emoValue: number;
   dayOverDayChange: DayOverDayChange;
+  isDecline?: boolean;
 }
 
 interface InsightOverviewData {
@@ -101,26 +102,40 @@ export default function InsightOverviewFeature() {
           ) : data && data.albums.length > 0 ? (
             data.albums.map((album) => {
               const isPositive = album.dayOverDayChange.value >= 0;
+              const decline = album.isDecline === true;
               return (
                 <Link
                   key={album.id}
                   href={`/invests/${album.id}/insight`}
-                  className="flex items-center justify-between rounded-xl bg-white px-4 py-3 shadow-card transition-colors active:bg-gray-50"
+                  className={`flex items-center justify-between rounded-xl px-4 py-3 shadow-card transition-colors ${
+                    decline
+                      ? 'border border-red-300 bg-red-50 active:bg-red-100'
+                      : 'bg-white active:bg-gray-50'
+                  }`}
                 >
                   <div className="grid gap-0.5">
-                    <span className="text-[15px] font-medium text-gray-900">
+                    <span
+                      className={`text-[15px] font-medium ${decline ? 'text-red-700' : 'text-gray-900'}`}
+                    >
                       {album.name}
                     </span>
-                    <span className="text-[13px] text-gray-500">
+                    <span
+                      className={`text-[13px] ${decline ? 'text-red-400' : 'text-gray-500'}`}
+                    >
+                      {decline && '暴落中 · '}
                       {album.albumType === 'SHARED'
                         ? (album.groupName ?? 'SHARED')
                         : 'PRIVATE'}
                     </span>
                   </div>
                   <div className="grid gap-0.5 text-right">
-                    <span className="text-[15px] font-medium text-gray-900">
+                    <span
+                      className={`text-[15px] font-medium ${decline ? 'text-red-600' : 'text-gray-900'}`}
+                    >
                       {Math.round(album.emoValue).toLocaleString()}{' '}
-                      <span className="text-[13px] font-normal text-gray-500">
+                      <span
+                        className={`text-[13px] font-normal ${decline ? 'text-red-400' : 'text-gray-500'}`}
+                      >
                         emo
                       </span>
                     </span>

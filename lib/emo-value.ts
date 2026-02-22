@@ -92,3 +92,55 @@ export function calculateDayOverDayChangeWithBoost(
     percentage: Math.round(percentage * 100) / 100,
   };
 }
+
+/**
+ * ブースト（可変）+ ショック込みのエモ価計算。
+ * totalRelevanceBoost: sum of (relevanceScore × BOOST_MULTIPLIER) for the album
+ * shockMultiplier: 0〜1 の乗数（calculateShockMultiplier の戻り値）
+ */
+export function calculateAlbumEmoWithBoostAndShock(
+  storages: StorageParams[],
+  totalRelevanceBoost: number,
+  shockMultiplier: number,
+  asOfDate?: Date,
+): number {
+  const base = calculateAlbumEmo(storages, asOfDate);
+  const boosted =
+    totalRelevanceBoost > 0 ? base * (1 + totalRelevanceBoost) : base;
+  return boosted * shockMultiplier;
+}
+
+/**
+ * 前日比（ブースト + ショック込み）。
+ */
+export function calculateDayOverDayFull(
+  storages: StorageParams[],
+  todayBoost: number,
+  todayShockMul: number,
+  yesterdayShockMul: number,
+): { value: number; percentage: number } {
+  const now = new Date();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  const todayValue = calculateAlbumEmoWithBoostAndShock(
+    storages,
+    todayBoost,
+    todayShockMul,
+    now,
+  );
+  const yesterdayValue = calculateAlbumEmoWithBoostAndShock(
+    storages,
+    0,
+    yesterdayShockMul,
+    yesterday,
+  );
+
+  const value = todayValue - yesterdayValue;
+  const percentage = yesterdayValue > 0 ? (value / yesterdayValue) * 100 : 0;
+
+  return {
+    value: Math.round(value * 100) / 100,
+    percentage: Math.round(percentage * 100) / 100,
+  };
+}

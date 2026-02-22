@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { flushSync } from 'react-dom';
 import Link from 'next/link';
 import { useUser } from '@auth0/nextjs-auth0/client';
-import TopEmotionsChart, {
-  type TopEmotionItem,
-} from '@/components/mood/TopEmotionsChart';
+import AlbumMoversSection, {
+  type MoverAlbum,
+} from '@/components/mood/AlbumMoversSection';
 import UnifiedMoodForm from '@/components/sentences/UnifiedMoodForm';
 import { useAgentComment } from '@/lib/agent-comment-context';
 
@@ -14,6 +14,13 @@ type SuggestedAlbumItem = {
   id: string;
   name: string;
   reason?: string;
+};
+
+type ShockedAlbumItem = {
+  id: string;
+  name: string;
+  reason?: string;
+  shockRate: number;
 };
 
 export default function HomeFeature() {
@@ -30,10 +37,14 @@ export default function HomeFeature() {
   const [suggestedAlbums, setSuggestedAlbums] = useState<SuggestedAlbumItem[]>(
     [],
   );
+  const [shockedAlbums, setShockedAlbums] = useState<ShockedAlbumItem[]>([]);
   const [suggestedAlbumsError, setSuggestedAlbumsError] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
-  const [topEmotions, setTopEmotions] = useState<TopEmotionItem[]>([]);
-  const [topEmotionsLoading, setTopEmotionsLoading] = useState(false);
+  const [moversRisers, setMoversRisers] = useState<MoverAlbum[]>([]);
+  const [moversFallers, setMoversFallers] = useState<MoverAlbum[]>([]);
+  const [moversLoading, setMoversLoading] = useState(false);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
+  const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const SENTENCE_STORAGE_KEY = 'sentence-from-words-output';
   const { user: authUser } = useUser();
   const { clearAgentComment, appendAgentComment, setAgentComment } =
@@ -96,24 +107,62 @@ export default function HomeFeature() {
   useEffect(() => {
     if (!authUser) return;
     let cancelled = false;
-    setTopEmotionsLoading(true);
-    fetch('/api/v1/mood/top-emotions')
+    setMoversLoading(true);
+    fetch('/api/v1/albums/movers')
       .then((res) => (res.ok ? res.json() : null))
-      .then((data: { topEmotions?: TopEmotionItem[] } | null) => {
-        if (!cancelled && data?.topEmotions) {
-          setTopEmotions(data.topEmotions);
-        }
-      })
+      .then(
+        (data: { risers?: MoverAlbum[]; fallers?: MoverAlbum[] } | null) => {
+          if (!cancelled && data) {
+            setMoversRisers(data.risers ?? []);
+            setMoversFallers(data.fallers ?? []);
+          }
+        },
+      )
       .catch(() => {
         // ignore
       })
       .finally(() => {
-        if (!cancelled) setTopEmotionsLoading(false);
+        if (!cancelled) setMoversLoading(false);
       });
     return () => {
       cancelled = true;
     };
   }, [authUser]);
+
+  const startCooldownTimer = useCallback((seconds: number) => {
+    if (cooldownRef.current) clearInterval(cooldownRef.current);
+    setCooldownSeconds(seconds);
+    if (seconds <= 0) return;
+    cooldownRef.current = setInterval(() => {
+      setCooldownSeconds((prev) => {
+        if (prev <= 1) {
+          if (cooldownRef.current) clearInterval(cooldownRef.current);
+          cooldownRef.current = null;
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
+
+  useEffect(() => {
+    if (!authUser) return;
+    fetch('/api/v1/mood/cooldown')
+      .then((res) => (res.ok ? res.json() : null))
+      .then(
+        (data: { isCooldown?: boolean; remainingSeconds?: number } | null) => {
+          if (data?.isCooldown && data.remainingSeconds) {
+            startCooldownTimer(data.remainingSeconds);
+          }
+        },
+      )
+      .catch(() => {
+        // ignore
+      });
+    return () => {
+      if (cooldownRef.current) clearInterval(cooldownRef.current);
+    };
+  }, [authUser, startCooldownTimer]);
 
   const handleToggleSuggested = (word: string) => {
     setSelectedSuggestedWords((prev) =>
@@ -135,6 +184,7 @@ export default function HomeFeature() {
     setMoodRecommendationText('');
     setSuggestedAlbumsError('');
     setSuggestedAlbums([]);
+    setShockedAlbums([]);
     clearAgentComment();
 
     try {
@@ -160,6 +210,7 @@ export default function HomeFeature() {
         }
         if (typeof data.sentence === 'string') {
           setGeneratedSentence(data.sentence);
+          startCooldownTimer(3600);
           try {
             localStorage.setItem(SENTENCE_STORAGE_KEY, data.sentence);
           } catch {
@@ -178,11 +229,13 @@ export default function HomeFeature() {
           const albumRes = await fetch('/api/v1/mood/suggested-albums');
           const albumData = (await albumRes.json().catch(() => ({}))) as {
             suggestedAlbums?: SuggestedAlbumItem[];
+            shockedAlbums?: ShockedAlbumItem[];
             message?: string;
             error?: string;
           };
           if (albumRes.ok) {
             setSuggestedAlbums(albumData.suggestedAlbums ?? []);
+            setShockedAlbums(albumData.shockedAlbums ?? []);
             if (
               (albumData.suggestedAlbums ?? []).length === 0 &&
               albumData.message
@@ -263,7 +316,7 @@ export default function HomeFeature() {
         <section className="grid gap-4 rounded-xl bg-white px-4 py-4 shadow-card">
           <div>
             <h2 className="text-[15px] font-medium text-gray-900">
-              単語から文章
+              今日の気分は？
             </h2>
             <p className="mt-1 text-[13px] text-gray-500">
               感情ワードを選ぶか単語を追加して、文章を生成します。ログイン中は心象として保存し、感情に合うアルバムを提案できます。
@@ -276,6 +329,7 @@ export default function HomeFeature() {
             isLoading={isSubmitting}
             isLoggedIn={!!authUser}
             isSuggestedWordsLoading={suggestedWordsLoading}
+            cooldownSeconds={cooldownSeconds}
             onToggleSuggested={handleToggleSuggested}
             onAddCustom={handleAddCustom}
             onRemoveCustom={handleRemoveCustom}
@@ -318,16 +372,40 @@ export default function HomeFeature() {
               </ul>
             </div>
           )}
+          {shockedAlbums.length > 0 && (
+            <div className="grid gap-2">
+              <h3 className="text-sm font-semibold text-red-600">
+                暴落アルバム
+              </h3>
+              <ul className="space-y-1 text-sm">
+                {shockedAlbums.map((a) => (
+                  <li
+                    key={a.id}
+                    className="rounded-lg border border-red-200 bg-red-50 px-3 py-2"
+                  >
+                    <span className="font-medium text-red-700">{a.name}</span>
+                    <span className="ml-2 text-xs text-red-500">
+                      -{a.shockRate}%
+                    </span>
+                    {a.reason && (
+                      <p className="mt-0.5 text-xs text-red-400">{a.reason}</p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </section>
 
         {authUser && (
           <section className="rounded-xl bg-white px-4 py-4 shadow-card">
             <h2 className="mb-3 text-[15px] font-medium text-gray-900">
-              トップエモ3選
+              エモ指数ランキング
             </h2>
-            <TopEmotionsChart
-              topEmotions={topEmotions}
-              loading={topEmotionsLoading}
+            <AlbumMoversSection
+              risers={moversRisers}
+              fallers={moversFallers}
+              loading={moversLoading}
             />
           </section>
         )}

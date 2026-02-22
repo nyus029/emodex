@@ -16,10 +16,18 @@ jest.mock('@/lib/album-access', () => ({
 }));
 
 const mockPhotoStorageFindMany = jest.fn();
+const mockMoodRecordFindMany = jest.fn();
+const mockEmoShockEventFindMany = jest.fn();
 jest.mock('@/lib/prisma', () => ({
   prisma: {
     photoStorage: {
       findMany: (...args: unknown[]) => mockPhotoStorageFindMany(...args),
+    },
+    moodRecord: {
+      findMany: (...args: unknown[]) => mockMoodRecordFindMany(...args),
+    },
+    emoShockEvent: {
+      findMany: (...args: unknown[]) => mockEmoShockEventFindMany(...args),
     },
   },
 }));
@@ -31,6 +39,8 @@ describe('GET /api/v1/albums/insight/[id]', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockMoodRecordFindMany.mockResolvedValue([]);
+    mockEmoShockEventFindMany.mockResolvedValue([]);
     mockFindAccessibleAlbum.mockResolvedValue({
       id: albumId,
       name: 'Test Album',

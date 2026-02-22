@@ -1,11 +1,16 @@
 import { prisma } from '@/lib/prisma';
 import { findAccessibleAlbum } from '@/lib/album-access';
 import {
-  calculateAlbumEmoWithBoost,
+  calculateAlbumEmoWithBoostAndShock,
   type StorageParams,
 } from '@/lib/emo-value';
 import { requireAuth, jsonSuccess, jsonError, roundEmo } from '@/lib/api-utils';
-import { getTodayBoostCounts } from '@/lib/emo-boost';
+import { getTodayBoostScores } from '@/lib/emo-boost';
+import {
+  calculateShockMultiplier,
+  isInDecline,
+  type ShockEvent,
+} from '@/lib/emo-shock';
 import type { RouteContext } from '@/types/api';
 
 const PERIOD_DAYS: Record<string, number> = {
@@ -67,10 +72,35 @@ export async function GET(
     aggregated.set(dateStr, (aggregated.get(dateStr) ?? 0) + snap.emoValue);
   }
 
-  const data = Array.from(aggregated.entries()).map(([time, value]) => ({
-    time,
-    value: roundEmo(value),
+  const shockRecords = await prisma.emoShockEvent.findMany({
+    where: {
+      albumId: id,
+      ...(sinceDate ? { shockedAt: { gte: sinceDate } } : {}),
+    },
+    select: {
+      shockRate: true,
+      shockedAt: true,
+      recoveryDays: true,
+    },
+    orderBy: { shockedAt: 'asc' },
+  });
+
+  const shockEvents: ShockEvent[] = shockRecords.map((r) => ({
+    shockRate: r.shockRate,
+    shockedAt: r.shockedAt,
+    recoveryDays: r.recoveryDays,
   }));
+
+  const data = Array.from(aggregated.entries()).map(([time, value]) => {
+    const dateObj = new Date(time + 'T12:00:00Z');
+    const shockMul = calculateShockMultiplier(shockEvents, dateObj);
+    const declined = isInDecline(shockEvents, dateObj);
+    return {
+      time,
+      value: roundEmo(value * shockMul),
+      ...(declined ? { isDecline: true as const } : {}),
+    };
+  });
 
   const photoStorages = await prisma.photoStorage.findMany({
     where: { albumId: id },
@@ -83,19 +113,30 @@ export async function GET(
   });
   const storages: StorageParams[] = photoStorages;
 
-  const boostCounts = await getTodayBoostCounts([id]);
-  const boostCount = boostCounts.get(id) ?? 0;
+  const boostScores = await getTodayBoostScores([id]);
+  const boost = boostScores.get(id) ?? 0;
+  const todayShockMul = calculateShockMultiplier(shockEvents, now);
+  const todayDecline = isInDecline(shockEvents, now);
 
   const todayStr = now.toISOString().split('T')[0];
-  const todayValue = calculateAlbumEmoWithBoost(storages, boostCount, now);
+  const todayValue = calculateAlbumEmoWithBoostAndShock(
+    storages,
+    boost,
+    todayShockMul,
+    now,
+  );
   const lastEntry = data[data.length - 1];
   if (!lastEntry || lastEntry.time !== todayStr) {
     data.push({
       time: todayStr,
       value: roundEmo(todayValue),
+      ...(todayDecline ? { isDecline: true as const } : {}),
     });
-  } else if (boostCount > 0) {
+  } else {
     lastEntry.value = roundEmo(todayValue);
+    if (todayDecline) {
+      (lastEntry as { isDecline?: boolean }).isDecline = true;
+    }
   }
 
   return jsonSuccess({ period, data });

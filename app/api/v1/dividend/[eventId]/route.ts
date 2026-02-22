@@ -28,6 +28,7 @@ export async function GET(
               blobUrl: true,
               contentType: true,
             },
+            orderBy: { createdAt: 'asc' },
           },
         },
       },
@@ -74,6 +75,7 @@ export async function GET(
       photoCount: event.photoStorage.photoCount,
       isCompoundActive: event.photoStorage.isCompoundActive,
       tags: (event.photoStorage.tags as string[]) ?? [],
+      thumbnailUrl: event.photoStorage.photos[0]?.blobUrl ?? null,
       photosVisible,
       photosExpireAt: isReceive ? expireAt.toISOString() : null,
       photos: photosVisible
