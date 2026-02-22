@@ -426,7 +426,7 @@ export default function PortfolioClient({
     editingGroupAdminUserId !== null && editingGroupAdminUserId === userId;
 
   return (
-    <div className="min-h-screen bg-background-light p-5">
+    <div className="min-h-full bg-background-light p-5">
       <div className="mx-auto max-w-md space-y-4 pb-24">
         <div className="rounded-xl bg-white px-4 py-3 shadow-card">
           <div className="flex items-center justify-between">

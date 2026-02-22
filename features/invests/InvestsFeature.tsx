@@ -256,7 +256,7 @@ export default function InvestsFeature() {
   const showAlbumStep = emoType === 'PRIVATE' || isSharedReady;
 
   return (
-    <div className="min-h-screen bg-background-light p-5">
+    <div className="min-h-full bg-background-light p-5">
       <form onSubmit={onSubmit}>
         <div className="mx-auto max-w-md space-y-4 pb-24">
           {/* ページヘッダーカード */}
