@@ -14,6 +14,7 @@ const mockAlbumFindMany = jest.fn();
 const mockUserFindUnique = jest.fn();
 const mockMembershipFindMany = jest.fn();
 const mockMoodRecordFindMany = jest.fn();
+const mockEmoShockEventFindMany = jest.fn();
 
 jest.mock('@/lib/prisma', () => ({
   prisma: {
@@ -29,6 +30,9 @@ jest.mock('@/lib/prisma', () => ({
     moodRecord: {
       findMany: (...args: unknown[]) => mockMoodRecordFindMany(...args),
     },
+    emoShockEvent: {
+      findMany: (...args: unknown[]) => mockEmoShockEventFindMany(...args),
+    },
   },
 }));
 
@@ -40,6 +44,7 @@ describe('GET /api/v1/albums/insight', () => {
     mockUserFindUnique.mockResolvedValue(null);
     mockMembershipFindMany.mockResolvedValue([]);
     mockMoodRecordFindMany.mockResolvedValue([]);
+    mockEmoShockEventFindMany.mockResolvedValue([]);
     mockAlbumFindMany.mockImplementation(
       (args: { where: { userId?: string } }) => {
         const userId = args?.where?.userId;

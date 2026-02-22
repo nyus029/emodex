@@ -1008,6 +1008,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/albums/movers:
+    get:
+      tags:
+        - Albums
+      summary: Get top rising and falling albums
+      description: Returns up to 3 rising and 3 falling albums by day-over-day emo value change percentage, with 1-week sparkline chart data.
+      responses:
+        '200':
+          description: Album movers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlbumMoversResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/cron/emo-snapshots:
     get:
       tags:
@@ -1151,8 +1170,33 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Cooldown period active (1 hour between submissions)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Server or LLM error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/mood/cooldown:
+    get:
+      tags:
+        - Mood
+      summary: Get mood submission cooldown status
+      description: Returns whether the user is in a cooldown period after submitting a mood record. Cooldown is 1 hour.
+      responses:
+        '200':
+          description: Cooldown status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MoodCooldownResponse'
+        '401':
+          description: Unauthorized
           content:
             application/json:
               schema:
@@ -1856,6 +1900,9 @@ components:
         value:
           type: number
           example: 8500
+        isDecline:
+          type: boolean
+          description: True when the album is in a shock decline period on this date
     MoodSentenceRequest:
       type: object
       required:
@@ -1896,9 +1943,18 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SuggestedAlbumItem'
+        shockedAlbums:
+          type: array
+          description: Albums that experienced an emo shock (decline) due to the mood
+          items:
+            $ref: '#/components/schemas/ShockedAlbumItem'
         emotionSentence:
           type: string
           description: The mood sentence used for suggestion
+        moodSeverity:
+          type: number
+          description: Severity of the mood (0.0-1.0)
+          example: 0.65
         message:
           type: string
           description: Optional message (e.g. when no albums)
@@ -1917,6 +1973,37 @@ components:
         reason:
           type: string
           description: Short reason why this album fits the mood
+        emoValue:
+          type: number
+          description: Current emo value of the album
+          example: 8500
+        emoBoost:
+          type: number
+          description: Variable boost percentage based on relevance (0-50)
+          example: 35
+        tagWord:
+          type: string
+          description: A random tag from the album
+    ShockedAlbumItem:
+      type: object
+      required:
+        - id
+        - name
+        - shockRate
+      properties:
+        id:
+          type: string
+          example: abc456
+        name:
+          type: string
+          example: 元カノとの旅行
+        reason:
+          type: string
+          description: Why this album is inappropriate for the current mood
+        shockRate:
+          type: number
+          description: Shock percentage (decline rate)
+          example: 25
     SentenceRequest:
       type: object
       required:
@@ -1991,6 +2078,9 @@ components:
           example: 8500
         dayOverDayChange:
           $ref: '#/components/schemas/EmoValueChange'
+        isDecline:
+          type: boolean
+          description: True when the album is currently in a shock decline period
     DividendListResponse:
       type: object
       required:
@@ -2466,3 +2556,65 @@ components:
             emoValueAtEvent:
               type: number
               example: 1500.5
+    MoodCooldownResponse:
+      type: object
+      required:
+        - isCooldown
+        - remainingSeconds
+        - canSubmitAt
+      properties:
+        isCooldown:
+          type: boolean
+          example: true
+        remainingSeconds:
+          type: integer
+          minimum: 0
+          example: 2400
+        canSubmitAt:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          example: '2026-02-22T14:00:00.000Z'
+    AlbumMoversResponse:
+      type: object
+      required:
+        - risers
+        - fallers
+      properties:
+        risers:
+          type: array
+          maxItems: 3
+          items:
+            $ref: '#/components/schemas/MoverAlbumItem'
+        fallers:
+          type: array
+          maxItems: 3
+          items:
+            $ref: '#/components/schemas/MoverAlbumItem'
+    MoverAlbumItem:
+      type: object
+      required:
+        - id
+        - name
+        - emoValue
+        - changePercentage
+        - chartData
+      properties:
+        id:
+          type: string
+          example: abc123
+        name:
+          type: string
+          example: 家族アルバム
+        emoValue:
+          type: number
+          example: 8500
+        changePercentage:
+          type: number
+          format: float
+          example: 2.34
+        chartData:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChartDataPoint'

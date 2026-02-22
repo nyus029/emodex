@@ -73,6 +73,7 @@ model Album {
   photoStorages           PhotoStorage[]
   dividendEvents          DividendEvent[]
   approvalRequests        DividendApprovalRequest[]
+  emoShockEvents          EmoShockEvent[]
 }
 
 model PhotoStorage {
@@ -255,7 +256,25 @@ model MoodRecord {
   words              Json
   recommendationText String?   @db.Text
   boostedAlbumIds    Json?
+  boostedAlbumScores Json?
   createdAt          DateTime  @default(now())
+  emoShockEvents     EmoShockEvent[]
 
   @@index([userId])
+}
+
+model EmoShockEvent {
+  id           String     @id @default(cuid())
+  albumId      String
+  album        Album      @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  moodRecordId String
+  moodRecord   MoodRecord @relation(fields: [moodRecordId], references: [id], onDelete: Cascade)
+  shockRate    Float
+  shockedAt    DateTime
+  recoveryDays Int        @default(7)
+  reason       String?    @db.Text
+  createdAt    DateTime   @default(now())
+
+  @@index([albumId, shockedAt])
+  @@index([moodRecordId])
 }
