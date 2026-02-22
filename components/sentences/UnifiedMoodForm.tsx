@@ -46,7 +46,11 @@ export default function UnifiedMoodForm({
         disabled={isLoading || totalSelectedCount === 0}
         className="w-fit rounded-lg bg-green px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
       >
-        {isLoading ? '処理中...' : isLoggedIn ? '心象を記録する' : '文章を生成'}
+        {isLoading
+          ? '処理中...'
+          : isLoggedIn
+            ? '気持ちを投稿する'
+            : '文章を生成'}
       </button>
     </div>
   );
