@@ -4,14 +4,16 @@ import { findAccessibleAlbum } from '@/lib/album-access';
 import { calculatePhotoStorageEmo } from '@/lib/emo-value';
 import { createApprovalRequest } from '@/lib/dividend-approval';
 import {
+  executeDividendOnStorage,
+  RECEIVE_COOLDOWN_DAYS,
+} from '@/lib/dividend-execution';
+import {
   requireAuth,
   parseBody,
   jsonSuccess,
   jsonError,
 } from '@/lib/api-utils';
 import type { RouteContext } from '@/types/api';
-
-const RECEIVE_COOLDOWN_DAYS = 7;
 
 const dividendSchema = z.object({
   action: z.enum(['REINVEST', 'RECEIVE']),
@@ -189,77 +191,17 @@ export async function POST(
     }> = [];
 
     for (const storage of activeStorages) {
-      if (action === 'RECEIVE') {
-        const cooldownSince = new Date();
-        cooldownSince.setDate(cooldownSince.getDate() - RECEIVE_COOLDOWN_DAYS);
-        const recentReceive = await tx.dividendEvent.findFirst({
-          where: {
-            photoStorageId: storage.id,
-            action: 'RECEIVE',
-            executedAt: { gte: cooldownSince },
-          },
-        });
-        if (recentReceive) continue;
+      const execution = await executeDividendOnStorage(tx, {
+        albumId: id,
+        storage,
+        action,
+        enforceReceiveCooldown: action === 'RECEIVE',
+      });
+      if (execution.status === 'skipped') {
+        continue;
       }
 
-      let emoValue: number;
-      if (action === 'REINVEST' && !storage.isCompoundActive) {
-        const lastReceive = await tx.dividendEvent.findFirst({
-          where: { photoStorageId: storage.id, action: 'RECEIVE' },
-          orderBy: { executedAt: 'desc' },
-        });
-        emoValue = lastReceive?.emoValueAtEvent ?? 0;
-      } else {
-        emoValue = calculatePhotoStorageEmo({
-          photoCount: storage.photoCount,
-          baseEmoPerPhoto: storage.baseEmoPerPhoto,
-          compoundStartDate: storage.compoundStartDate,
-          isCompoundActive: true,
-        });
-      }
-
-      const previousBaseEmo = storage.baseEmoPerPhoto;
-
-      if (action === 'REINVEST') {
-        const newBaseEmo = storage.baseEmoPerPhoto * 2;
-        await tx.photoStorage.update({
-          where: { id: storage.id },
-          data: {
-            baseEmoPerPhoto: newBaseEmo,
-            compoundStartDate: new Date(),
-            isCompoundActive: true,
-          },
-        });
-
-        const event = await tx.dividendEvent.create({
-          data: {
-            albumId: id,
-            photoStorageId: storage.id,
-            action: 'REINVEST',
-            emoValueAtEvent: emoValue,
-            previousBaseEmo,
-            newBaseEmo,
-          },
-        });
-        events.push({ event, storageName: storage.name });
-      } else {
-        await tx.photoStorage.update({
-          where: { id: storage.id },
-          data: { isCompoundActive: false },
-        });
-
-        const event = await tx.dividendEvent.create({
-          data: {
-            albumId: id,
-            photoStorageId: storage.id,
-            action: 'RECEIVE',
-            emoValueAtEvent: emoValue,
-            previousBaseEmo,
-            newBaseEmo: 0,
-          },
-        });
-        events.push({ event, storageName: storage.name });
-      }
+      events.push({ event: execution.event, storageName: storage.name });
     }
 
     return events;
