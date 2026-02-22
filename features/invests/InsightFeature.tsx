@@ -27,6 +27,7 @@ interface InsightData {
       value: number;
       percentage: number;
     };
+    isDecline?: boolean;
   };
   photoStorages?: PhotoStorageSummary[];
 }
@@ -257,12 +258,17 @@ export default function InsightFeature({ albumId }: InsightFeatureProps) {
   const changeValue = insight?.emoValueInfo.dayOverDayChange.value ?? 0;
   const changePercent = insight?.emoValueInfo.dayOverDayChange.percentage ?? 0;
   const isPositive = changeValue >= 0;
+  const isDecline = insight?.emoValueInfo.isDecline === true;
 
   return (
     <div className="min-h-screen bg-background-light p-5">
       <div className="mx-auto max-w-md space-y-4 pb-24">
         {/* Header + Emo Value Card */}
-        <div className="rounded-xl bg-white px-5 py-4 shadow-card">
+        <div
+          className={`rounded-xl px-5 py-4 shadow-card ${
+            isDecline ? 'border border-red-300 bg-red-50' : 'bg-white'
+          }`}
+        >
           {loadingInsight ? (
             <>
               <div className="h-5 w-36 animate-pulse rounded-lg bg-gray-100" />
@@ -271,14 +277,29 @@ export default function InsightFeature({ albumId }: InsightFeatureProps) {
             </>
           ) : (
             <>
-              <h1 className="text-[15px] font-medium text-gray-900">
-                {insight?.albumBasicInfo.name}
-              </h1>
-              <p className="mt-2 text-2xl font-bold text-gray-900">
+              <div className="flex items-center gap-2">
+                <h1
+                  className={`text-[15px] font-medium ${isDecline ? 'text-red-700' : 'text-gray-900'}`}
+                >
+                  {insight?.albumBasicInfo.name}
+                </h1>
+                {isDecline && (
+                  <span className="rounded bg-red-500 px-1.5 py-0.5 text-[11px] font-bold text-white">
+                    暴落中
+                  </span>
+                )}
+              </div>
+              <p
+                className={`mt-2 text-2xl font-bold ${isDecline ? 'text-red-600' : 'text-gray-900'}`}
+              >
                 {Math.round(
                   insight?.emoValueInfo.emoValue ?? 0,
                 ).toLocaleString()}{' '}
-                <span className="text-sm font-normal text-gray-500">emo</span>
+                <span
+                  className={`text-sm font-normal ${isDecline ? 'text-red-400' : 'text-gray-500'}`}
+                >
+                  emo
+                </span>
               </p>
               <p
                 className={`mt-0.5 text-[13px] font-medium ${isPositive ? 'text-green' : 'text-red-500'}`}

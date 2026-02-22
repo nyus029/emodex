@@ -6,6 +6,7 @@ import {
   jsonSuccess,
   jsonError,
 } from '@/lib/api-utils';
+import { getCooldownStatus } from '@/lib/mood-cooldown';
 
 const bodySchema = z.object({
   words: z
@@ -19,6 +20,21 @@ export async function POST(request: Request) {
   const auth = await requireAuth();
   if (auth.error) return auth.error;
   const { userId } = auth.session;
+
+  const latest = await prisma.moodRecord.findFirst({
+    where: { userId },
+    orderBy: { createdAt: 'desc' },
+    select: { createdAt: true },
+  });
+  const cooldown = getCooldownStatus(latest?.createdAt ?? null);
+  if (cooldown.isCooldown) {
+    const mins = Math.floor(cooldown.remainingSeconds / 60);
+    const secs = cooldown.remainingSeconds % 60;
+    return jsonError(
+      `心象の記録は1時間に1回までです。あと${mins}分${secs}秒お待ちください。`,
+      429,
+    );
+  }
 
   const rawBody = (await request.json().catch(() => null)) as unknown;
   const parsed = parseBody(rawBody, bodySchema);

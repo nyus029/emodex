@@ -4,6 +4,7 @@ import { requireAuth, jsonSuccess, jsonError, roundEmo } from '@/lib/api-utils';
 import { calculateAlbumEmo, type StorageParams } from '@/lib/emo-value';
 import { calculateMoodSeverity } from '@/lib/mood-scoring';
 import { BOOST_MULTIPLIER } from '@/lib/emo-boost';
+import { SHOCK_MULTIPLIER } from '@/lib/emo-shock';
 import { prisma } from '@/lib/prisma';
 
 export async function GET() {
@@ -58,7 +59,16 @@ export async function GET() {
   const words = toTagArray(latest.words);
   const moodSeverity = calculateMoodSeverity(words);
 
-  let suggested: Array<{ id: string; reason?: string }>;
+  let suggested: Array<{
+    id: string;
+    reason?: string;
+    relevanceScore?: number;
+  }>;
+  let inappropriate: Array<{
+    id: string;
+    reason?: string;
+    inappropriatenessScore: number;
+  }> = [];
   try {
     const { suggestAlbumsByEmotionTool } =
       await import('@/mastra/tools/suggest-albums-by-emotion-tool');
@@ -84,6 +94,12 @@ export async function GET() {
         result && 'suggested' in result && Array.isArray(result.suggested)
           ? result.suggested
           : [];
+      inappropriate =
+        result &&
+        'inappropriate' in result &&
+        Array.isArray(result.inappropriate)
+          ? result.inappropriate
+          : [];
     }
   } catch (err) {
     console.error('Suggest albums by emotion error:', err);
@@ -99,7 +115,12 @@ export async function GET() {
     .filter((s) => albumMap.has(s.id))
     .map((s) => s.id);
 
-  const boostPercentage = roundEmo(BOOST_MULTIPLIER * 100);
+  const boostedAlbumScores = suggested
+    .filter((s) => albumMap.has(s.id))
+    .map((s) => ({
+      albumId: s.id,
+      relevanceScore: s.relevanceScore ?? 1.0,
+    }));
 
   const suggestedAlbums = suggested
     .filter((s) => albumMap.has(s.id))
@@ -111,26 +132,55 @@ export async function GET() {
         tags.length > 0
           ? tags[Math.floor(Math.random() * tags.length)]
           : undefined;
+      const relevance = s.relevanceScore ?? 1.0;
 
       return {
         id: album.id,
         name: album.name,
         reason: s.reason,
         emoValue,
-        emoBoost: boostPercentage,
+        emoBoost: roundEmo(relevance * BOOST_MULTIPLIER * 100),
         tagWord,
       };
     });
 
-  if (suggestedAlbumIds.length > 0) {
+  const validInappropriate = inappropriate.filter((i) => albumMap.has(i.id));
+
+  if (suggestedAlbumIds.length > 0 || validInappropriate.length > 0) {
     await prisma.moodRecord.update({
       where: { id: latest.id },
-      data: { boostedAlbumIds: suggestedAlbumIds },
+      data: {
+        boostedAlbumIds: suggestedAlbumIds,
+        boostedAlbumScores: boostedAlbumScores,
+      },
     });
   }
 
+  if (validInappropriate.length > 0) {
+    await prisma.emoShockEvent.createMany({
+      data: validInappropriate.map((item) => ({
+        albumId: item.id,
+        moodRecordId: latest.id,
+        shockRate: item.inappropriatenessScore * SHOCK_MULTIPLIER,
+        shockedAt: new Date(),
+        reason: item.reason,
+      })),
+    });
+  }
+
+  const shockedAlbums = validInappropriate.map((item) => {
+    const album = albumMap.get(item.id);
+    return {
+      id: item.id,
+      name: album?.name ?? '',
+      reason: item.reason,
+      shockRate: roundEmo(item.inappropriatenessScore * SHOCK_MULTIPLIER * 100),
+    };
+  });
+
   return jsonSuccess({
     suggestedAlbums,
+    shockedAlbums,
     emotionSentence: latest.sentence,
     moodSeverity: roundEmo(moodSeverity),
     ...(suggestedAlbums.length === 0 && albums.length > 0

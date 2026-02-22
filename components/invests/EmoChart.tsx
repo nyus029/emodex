@@ -11,6 +11,7 @@ import {
 export interface ChartDataPoint {
   time: string;
   value: number;
+  isDecline?: boolean;
 }
 
 interface EmoChartProps {
@@ -44,14 +45,69 @@ export default function EmoChart({ data, loading }: EmoChartProps) {
       },
     });
 
-    const series = chart.addSeries(AreaSeries, {
-      topColor: 'rgba(34, 197, 94, 0.4)',
-      bottomColor: 'rgba(34, 197, 94, 0.02)',
-      lineColor: '#22c55e',
-      lineWidth: 2,
-    });
+    const hasDecline = data.some((d) => d.isDecline);
 
-    series.setData(data);
+    if (!hasDecline) {
+      const series = chart.addSeries(AreaSeries, {
+        topColor: 'rgba(34, 197, 94, 0.4)',
+        bottomColor: 'rgba(34, 197, 94, 0.02)',
+        lineColor: '#22c55e',
+        lineWidth: 2,
+      });
+      series.setData(data);
+    } else {
+      const normalData: ChartDataPoint[] = [];
+      const declineData: ChartDataPoint[] = [];
+
+      for (let i = 0; i < data.length; i++) {
+        const point = data[i];
+        const prev = data[i - 1];
+        const next = data[i + 1];
+
+        if (point.isDecline) {
+          declineData.push(point);
+          if (prev && !prev.isDecline) {
+            declineData.push(prev);
+          }
+          if (next && !next.isDecline) {
+            normalData.push(point);
+          }
+        } else {
+          normalData.push(point);
+          if (prev && prev.isDecline) {
+            normalData.push(prev);
+          }
+          if (next && next.isDecline) {
+            declineData.push(point);
+          }
+        }
+      }
+
+      const dedup = (arr: ChartDataPoint[]) => {
+        const map = new Map<string, ChartDataPoint>();
+        for (const p of arr) map.set(p.time, p);
+        return Array.from(map.values()).sort((a, b) =>
+          a.time.localeCompare(b.time),
+        );
+      };
+
+      const normalSeries = chart.addSeries(AreaSeries, {
+        topColor: 'rgba(34, 197, 94, 0.4)',
+        bottomColor: 'rgba(34, 197, 94, 0.02)',
+        lineColor: '#22c55e',
+        lineWidth: 2,
+      });
+      normalSeries.setData(dedup(normalData));
+
+      const declineSeries = chart.addSeries(AreaSeries, {
+        topColor: 'rgba(239, 68, 68, 0.4)',
+        bottomColor: 'rgba(239, 68, 68, 0.02)',
+        lineColor: '#ef4444',
+        lineWidth: 2,
+      });
+      declineSeries.setData(dedup(declineData));
+    }
+
     chart.timeScale().fitContent();
     chartRef.current = chart;
 

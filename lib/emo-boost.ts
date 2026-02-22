@@ -52,3 +52,65 @@ export async function getTodayBoostCounts(
 
   return counts;
 }
+
+interface BoostScore {
+  albumId: string;
+  relevanceScore: number;
+}
+
+/**
+ * 当日の MoodRecord から boostedAlbumScores を集計し、
+ * albumId ごとの可変ブーストの合計 relevanceScore を返す。
+ * boostedAlbumScores がない古いレコードは relevanceScore = 1.0 にフォールバック。
+ */
+export async function getTodayBoostScores(
+  albumIds: string[],
+): Promise<Map<string, number>> {
+  const scores = new Map<string, number>();
+  if (albumIds.length === 0) return scores;
+
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
+  const records = await prisma.moodRecord.findMany({
+    where: {
+      createdAt: { gte: todayStart },
+      OR: [
+        { boostedAlbumScores: { not: Prisma.JsonNull } },
+        { boostedAlbumIds: { not: Prisma.JsonNull } },
+      ],
+    },
+    select: { boostedAlbumIds: true, boostedAlbumScores: true },
+  });
+
+  const targetSet = new Set(albumIds);
+
+  for (const record of records) {
+    const albumScores = record.boostedAlbumScores;
+    if (Array.isArray(albumScores)) {
+      for (const entry of albumScores) {
+        const item = entry as unknown as BoostScore;
+        if (typeof item?.albumId === 'string' && targetSet.has(item.albumId)) {
+          const rel =
+            typeof item.relevanceScore === 'number' ? item.relevanceScore : 1.0;
+          scores.set(
+            item.albumId,
+            (scores.get(item.albumId) ?? 0) + rel * BOOST_MULTIPLIER,
+          );
+        }
+      }
+      continue;
+    }
+
+    const ids = record.boostedAlbumIds;
+    if (Array.isArray(ids)) {
+      for (const id of ids) {
+        if (typeof id === 'string' && targetSet.has(id)) {
+          scores.set(id, (scores.get(id) ?? 0) + 1.0 * BOOST_MULTIPLIER);
+        }
+      }
+    }
+  }
+
+  return scores;
+}

@@ -1,11 +1,15 @@
 import { prisma } from '@/lib/prisma';
 import {
-  calculateAlbumEmoWithBoost,
-  calculateDayOverDayChangeWithBoost,
+  calculateAlbumEmoWithBoostAndShock,
+  calculateDayOverDayFull,
   type StorageParams,
 } from '@/lib/emo-value';
 import { requireAuth, jsonSuccess, roundEmo } from '@/lib/api-utils';
-import { getTodayBoostCounts } from '@/lib/emo-boost';
+import { getTodayBoostScores } from '@/lib/emo-boost';
+import {
+  getActiveShockEvents,
+  calculateShockMultiplier,
+} from '@/lib/emo-shock';
 
 export async function GET() {
   const auth = await requireAuth();
@@ -68,37 +72,65 @@ export async function GET() {
 
   const allAlbums = [...ownAlbums, ...sharedAlbums];
   const allAlbumIds = allAlbums.map((a) => a.id);
-  const boostCounts = await getTodayBoostCounts(allAlbumIds);
+  const boostScores = await getTodayBoostScores(allAlbumIds);
+  const shockEventsMap = await getActiveShockEvents(allAlbumIds);
+
+  const now = new Date();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
 
   const allStorages: StorageParams[] = allAlbums.flatMap(
     (a) => a.photoStorages,
   );
-  const totalBoost = Array.from(boostCounts.values()).reduce(
+  const totalBoost = Array.from(boostScores.values()).reduce(
     (sum, c) => sum + c,
     0,
   );
 
-  const totalEmoValue = roundEmo(
-    calculateAlbumEmoWithBoost(allStorages, totalBoost),
+  const allShockEvents = allAlbumIds.flatMap(
+    (id) => shockEventsMap.get(id) ?? [],
   );
-  const totalDayOverDayChange = calculateDayOverDayChangeWithBoost(
+  const totalShockMul = calculateShockMultiplier(allShockEvents, now);
+  const totalShockMulYesterday = calculateShockMultiplier(
+    allShockEvents,
+    yesterday,
+  );
+
+  const totalEmoValue = roundEmo(
+    calculateAlbumEmoWithBoostAndShock(allStorages, totalBoost, totalShockMul),
+  );
+  const totalDayOverDayChange = calculateDayOverDayFull(
     allStorages,
     totalBoost,
+    totalShockMul,
+    totalShockMulYesterday,
   );
 
   const albums = allAlbums
     .map((album) => {
       const storages: StorageParams[] = album.photoStorages;
-      const boost = boostCounts.get(album.id) ?? 0;
-      const emoValue = roundEmo(calculateAlbumEmoWithBoost(storages, boost));
+      const boost = boostScores.get(album.id) ?? 0;
+      const events = shockEventsMap.get(album.id) ?? [];
+      const shockMul = calculateShockMultiplier(events, now);
+      const shockMulYesterday = calculateShockMultiplier(events, yesterday);
+      const emoValue = roundEmo(
+        calculateAlbumEmoWithBoostAndShock(storages, boost, shockMul),
+      );
+      const dayOverDayChange = calculateDayOverDayFull(
+        storages,
+        boost,
+        shockMul,
+        shockMulYesterday,
+      );
       return {
         id: album.id,
         name: album.name,
         albumType: album.albumType,
         groupName: album.group?.groupName ?? null,
         emoValue,
-        dayOverDayChange: calculateDayOverDayChangeWithBoost(storages, boost),
-        ...(boost > 0 ? { emoBoostCount: boost } : {}),
+        dayOverDayChange,
+        ...(boost > 0 ? { emoBoostCount: 1 } : {}),
+        ...(dayOverDayChange.value < 0 ? { isDecline: true } : {}),
       };
     })
     .filter((a) => a.emoValue > 0);

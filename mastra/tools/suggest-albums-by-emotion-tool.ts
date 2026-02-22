@@ -90,6 +90,7 @@ function suggestByTagScore(
     ? top
     : albums.slice(0, 3).map((album) => ({ album, score: 0, tagScore: 0 }));
 
+  const maxScore = Math.max(...take.map((t) => t.score), 1);
   return take.map(({ album, score, tagScore }) => ({
     id: album.id,
     reason:
@@ -98,6 +99,8 @@ function suggestByTagScore(
         : score > 0
           ? 'エモ価が高く、今の気持ちに響くアルバムです'
           : FALLBACK_REASON_DEFAULT,
+    relevanceScore:
+      maxScore > 0 ? Math.round((score / maxScore) * 100) / 100 : 1.0,
   }));
 }
 
@@ -147,7 +150,12 @@ function buildSuggestPrompt(
     albumsJson,
     '',
     '以下のJSON形式のみを出力してください。説明やマークダウンは不要です。',
-    '{"suggested":[{"id":"アルバムのid","reason":"選んだ理由（1行）"}, ...]}',
+    '',
+    '1. suggested: 今の心象に合うアルバム（最大5件）。各アルバムに relevanceScore（0.0〜1.0、適切度）を付けてください。',
+    '2. inappropriate: 今の心象に対して見ない方がよいアルバム（最大3件）。例えば別れた相手との思い出アルバムなど、見ると逆効果になるもの。各アルバムに inappropriatenessScore（0.0〜1.0、不適切度）と reason を付けてください。',
+    '3. suggested と inappropriate が重複しないようにしてください。',
+    '',
+    '{"suggested":[{"id":"アルバムのid","reason":"選んだ理由（1行）","relevanceScore":0.8}, ...],"inappropriate":[{"id":"アルバムのid","reason":"見ない方がよい理由（1行）","inappropriatenessScore":0.7}, ...]}',
   );
   return lines.join('\n');
 }
@@ -156,6 +164,13 @@ export type SuggestedAlbum = {
   id: string;
   name: string;
   reason?: string;
+  relevanceScore?: number;
+};
+
+export type InappropriateAlbum = {
+  id: string;
+  reason?: string;
+  inappropriatenessScore: number;
 };
 
 /**
@@ -197,8 +212,18 @@ export const suggestAlbumsByEmotionTool = createTool({
       z.object({
         id: z.string(),
         reason: z.string().optional(),
+        relevanceScore: z.number().min(0).max(1).optional(),
       }),
     ),
+    inappropriate: z
+      .array(
+        z.object({
+          id: z.string(),
+          reason: z.string().optional(),
+          inappropriatenessScore: z.number().min(0).max(1),
+        }),
+      )
+      .optional(),
   }),
   execute: async ({
     emotionSentence,
@@ -209,7 +234,7 @@ export const suggestAlbumsByEmotionTool = createTool({
   }) => {
     const trimmed = (emotionSentence ?? '').trim();
     if (!trimmed || albums.length === 0) {
-      return { suggested: [] };
+      return { suggested: [], inappropriate: [] };
     }
 
     const extraKeywords = (words ?? [])
@@ -219,12 +244,12 @@ export const suggestAlbumsByEmotionTool = createTool({
       suggestByTagScore(trimmed, albums, 5, extraKeywords, moodSeverity);
 
     if (!process.env.OPENAI_API_KEY) {
-      return { suggested: fallback() };
+      return { suggested: fallback(), inappropriate: [] };
     }
 
     const agent = mastra.getAgent('chatAgent');
     if (!agent) {
-      return { suggested: fallback() };
+      return { suggested: fallback(), inappropriate: [] };
     }
 
     const albumsJson = JSON.stringify(
@@ -253,20 +278,38 @@ export const suggestAlbumsByEmotionTool = createTool({
       const text = (raw ?? '').trim();
       const jsonStr = extractJsonFromResponse(text);
       if (!jsonStr) {
-        return { suggested: fallback() };
+        return { suggested: fallback(), inappropriate: [] };
       }
       const parsed = JSON.parse(jsonStr) as {
-        suggested?: Array<{ id?: string; reason?: string }>;
+        suggested?: Array<{
+          id?: string;
+          reason?: string;
+          relevanceScore?: number;
+        }>;
+        inappropriate?: Array<{
+          id?: string;
+          reason?: string;
+          inappropriatenessScore?: number;
+        }>;
       };
       const rawSuggested = Array.isArray(parsed?.suggested)
         ? parsed.suggested
             .filter(
-              (s): s is { id: string; reason?: string } =>
-                typeof s?.id === 'string',
+              (
+                s,
+              ): s is {
+                id: string;
+                reason?: string;
+                relevanceScore?: number;
+              } => typeof s?.id === 'string',
             )
             .map((s) => ({
               id: s.id,
               reason: typeof s.reason === 'string' ? s.reason : undefined,
+              relevanceScore:
+                typeof s.relevanceScore === 'number'
+                  ? Math.min(1, Math.max(0, s.relevanceScore))
+                  : 1.0,
             }))
         : [];
       const seen = new Set<string>();
@@ -276,9 +319,30 @@ export const suggestAlbumsByEmotionTool = createTool({
         return true;
       });
 
-      return { suggested };
+      const rawInappropriate = Array.isArray(parsed?.inappropriate)
+        ? parsed.inappropriate
+            .filter(
+              (
+                s,
+              ): s is {
+                id: string;
+                reason?: string;
+                inappropriatenessScore?: number;
+              } => typeof s?.id === 'string' && !seen.has(s.id),
+            )
+            .map((s) => ({
+              id: s.id,
+              reason: typeof s.reason === 'string' ? s.reason : undefined,
+              inappropriatenessScore:
+                typeof s.inappropriatenessScore === 'number'
+                  ? Math.min(1, Math.max(0, s.inappropriatenessScore))
+                  : 0.5,
+            }))
+        : [];
+
+      return { suggested, inappropriate: rawInappropriate };
     } catch {
-      return { suggested: fallback() };
+      return { suggested: fallback(), inappropriate: [] };
     }
   },
 });
