@@ -51,6 +51,14 @@ interface InsightFeatureProps {
   albumId: string;
 }
 
+const CHART_HEIGHT_BY_PERIOD: Record<Period, number> = {
+  '1W': 340,
+  '1M': 320,
+  '3M': 300,
+  '1Y': 270,
+  ALL: 250,
+};
+
 export default function InsightFeature({ albumId }: InsightFeatureProps) {
   const router = useRouter();
   const [insight, setInsight] = useState<InsightData | null>(null);
@@ -257,6 +265,7 @@ export default function InsightFeature({ albumId }: InsightFeatureProps) {
   const changeValue = insight?.emoValueInfo.dayOverDayChange.value ?? 0;
   const changePercent = insight?.emoValueInfo.dayOverDayChange.percentage ?? 0;
   const isPositive = changeValue >= 0;
+  const chartHeight = CHART_HEIGHT_BY_PERIOD[period];
 
   return (
     <div className="min-h-screen bg-background-light p-5">
@@ -292,10 +301,15 @@ export default function InsightFeature({ albumId }: InsightFeatureProps) {
         </div>
 
         {/* Chart Card */}
-        <div className="rounded-xl bg-white px-4 py-4 shadow-card">
+        <div className="min-h-[320px] rounded-xl bg-white px-4 py-4 shadow-card">
           <PeriodTabs selected={period} onChange={setPeriod} />
-          <div className="mt-3">
-            <EmoChart data={chartData} loading={loadingChart} />
+          <div className="mt-3 min-h-[250px]">
+            <EmoChart
+              data={chartData}
+              loading={loadingChart}
+              period={period}
+              height={chartHeight}
+            />
           </div>
         </div>
 
