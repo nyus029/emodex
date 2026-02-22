@@ -55,6 +55,9 @@ export default function PortfolioClient({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingGroupId, setEditingGroupId] = useState<number | null>(null);
+  const [editingGroupAdminUserId, setEditingGroupAdminUserId] = useState<
+    number | null
+  >(null);
   const [editingGroupName, setEditingGroupName] = useState('');
   const [groupName, setGroupName] = useState('');
   const [memberEmail, setMemberEmail] = useState('');
@@ -113,6 +116,7 @@ export default function PortfolioClient({
 
   function openEditModal(group: PortfolioItem) {
     setEditingGroupId(group.id);
+    setEditingGroupAdminUserId(group.adminUserId);
     setEditingGroupName(group.name);
     setEditError(null);
     setIsUpdatingGroup(false);
@@ -129,6 +133,7 @@ export default function PortfolioClient({
   function resetEditModal() {
     setIsEditModalOpen(false);
     setEditingGroupId(null);
+    setEditingGroupAdminUserId(null);
     setEditingGroupName('');
     setEditError(null);
     setIsUpdatingGroup(false);
@@ -417,6 +422,8 @@ export default function PortfolioClient({
     editMemberEmail.trim().length > 0 &&
     !isAddingEditMember &&
     !!editingGroupId;
+  const isGroupAdmin =
+    editingGroupAdminUserId !== null && editingGroupAdminUserId === userId;
 
   return (
     <div className="min-h-screen bg-background-light p-5">
@@ -445,43 +452,25 @@ export default function PortfolioClient({
           </div>
         ) : (
           <div className="space-y-3">
-            {groups.map((group) =>
-              group.adminUserId === userId ? (
-                <button
-                  key={group.id}
-                  type="button"
-                  onClick={() => openEditModal(group)}
-                  className="flex w-full items-center gap-2 rounded-xl bg-white p-4 text-left shadow-card transition-colors hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600"
-                >
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-light-gray">
-                    <Image
-                      src="/avatar.svg"
-                      alt="avatar"
-                      width={16}
-                      height={16}
-                      className="h-4 w-4"
-                    />
-                  </div>
-                  <div className="font-medium text-gray-800">{group.name}</div>
-                </button>
-              ) : (
-                <div
-                  key={group.id}
-                  className="flex items-center gap-2 rounded-xl bg-white p-4 shadow-card"
-                >
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-light-gray">
-                    <Image
-                      src="/avatar.svg"
-                      alt="avatar"
-                      width={16}
-                      height={16}
-                      className="h-4 w-4"
-                    />
-                  </div>
-                  <div className="font-medium text-gray-800">{group.name}</div>
+            {groups.map((group) => (
+              <button
+                key={group.id}
+                type="button"
+                onClick={() => openEditModal(group)}
+                className="flex w-full items-center gap-2 rounded-xl bg-white p-4 text-left shadow-card transition-colors hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600"
+              >
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-light-gray">
+                  <Image
+                    src="/avatar.svg"
+                    alt="avatar"
+                    width={16}
+                    height={16}
+                    className="h-4 w-4"
+                  />
                 </div>
-              ),
-            )}
+                <div className="font-medium text-gray-800">{group.name}</div>
+              </button>
+            ))}
           </div>
         )}
       </div>
@@ -634,7 +623,7 @@ export default function PortfolioClient({
           >
             <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
               <p className="text-base font-semibold text-gray-800">
-                グループを編集
+                {isGroupAdmin ? 'グループを編集' : 'グループ詳細'}
               </p>
               <button
                 type="button"
@@ -658,6 +647,7 @@ export default function PortfolioClient({
                   type="text"
                   value={editingGroupName}
                   onChange={(event) => setEditingGroupName(event.target.value)}
+                  readOnly={!isGroupAdmin}
                   className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-800 outline-none transition-colors focus:border-green-600"
                   placeholder="グループ名を入力"
                 />
@@ -678,13 +668,14 @@ export default function PortfolioClient({
                         void handleAddMemberToGroup();
                       }
                     }}
+                    readOnly={!isGroupAdmin}
                     className="min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-800 outline-none transition-colors focus:border-green-600"
                     placeholder="sample@example.com"
                   />
                   <button
                     type="button"
                     onClick={handleAddMemberToGroup}
-                    disabled={!canAddEditMember}
+                    disabled={!isGroupAdmin || !canAddEditMember}
                     className="h-[42px] shrink-0 rounded-lg bg-green px-3 text-sm font-semibold text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isAddingEditMember ? '確認中...' : '追加'}
@@ -722,6 +713,7 @@ export default function PortfolioClient({
                           type="button"
                           onClick={() => handleRemoveMemberFromGroup(member)}
                           disabled={
+                            !isGroupAdmin ||
                             member.role === 'ADMIN' ||
                             removingMemberId === member.userId
                           }
@@ -742,24 +734,30 @@ export default function PortfolioClient({
               {editError ? (
                 <p className="text-sm text-red-600">{editError}</p>
               ) : null}
-              <div className="flex items-center justify-between border-t border-gray-100 pt-4">
-                <button
-                  type="button"
-                  onClick={handleDeleteGroup}
-                  disabled={isDeletingGroup || isUpdatingGroup}
-                  className="inline-flex h-[42px] items-center justify-center rounded-lg border border-red-300 px-4 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isDeletingGroup ? '削除中...' : 'グループ削除'}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleUpdateGroup}
-                  disabled={!canUpdateGroup || isDeletingGroup}
-                  className="inline-flex h-[42px] w-full items-center justify-center rounded-lg bg-green px-4 text-sm font-semibold text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
-                >
-                  {isUpdatingGroup ? '更新中...' : '更新'}
-                </button>
-              </div>
+              {isGroupAdmin ? (
+                <div className="flex items-center justify-between border-t border-gray-100 pt-4">
+                  <button
+                    type="button"
+                    onClick={handleDeleteGroup}
+                    disabled={isDeletingGroup || isUpdatingGroup}
+                    className="inline-flex h-[42px] items-center justify-center rounded-lg border border-red-300 px-4 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isDeletingGroup ? '削除中...' : 'グループ削除'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleUpdateGroup}
+                    disabled={!canUpdateGroup || isDeletingGroup}
+                    className="inline-flex h-[42px] w-full items-center justify-center rounded-lg bg-green px-4 text-sm font-semibold text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                  >
+                    {isUpdatingGroup ? '更新中...' : '更新'}
+                  </button>
+                </div>
+              ) : (
+                <p className="border-t border-gray-100 pt-4 text-sm text-gray-500">
+                  このグループは閲覧のみ可能です。
+                </p>
+              )}
             </div>
           </div>
         </div>
