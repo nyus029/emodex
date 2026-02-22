@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { findAccessibleAlbum } from '@/lib/album-access';
 import { calculatePhotoStorageEmo } from '@/lib/emo-value';
 import { createApprovalRequest } from '@/lib/dividend-approval';
+import { executeDueDividends } from '@/lib/dividend-execution';
 import {
   requireAuth,
   parseBody,
@@ -38,6 +39,10 @@ export async function POST(
   if (parsed.error) return parsed.error;
 
   const { action, photoStorageId } = parsed.data;
+  const dbUser = await prisma.user.findUnique({
+    where: { email: userEmail ?? '' },
+    select: { id: true },
+  });
 
   // SHARED album + RECEIVE → approval flow
   const needsApproval =
@@ -105,10 +110,6 @@ export async function POST(
 
   // --- SHARED RECEIVE: create approval requests ---
   if (needsApproval) {
-    const dbUser = await prisma.user.findUnique({
-      where: { email: userEmail ?? '' },
-      select: { id: true },
-    });
     if (!dbUser) {
       return jsonError('User not found', 404);
     }
@@ -264,6 +265,18 @@ export async function POST(
 
     return events;
   });
+
+  if (action === 'RECEIVE' && result.length > 0) {
+    await executeDueDividends(prisma, {
+      events: result.map(({ event, storageName }) => ({
+        id: event.id,
+        photoStorageName: storageName,
+      })),
+      albumType: album.albumType,
+      groupId: album.groupId,
+      initiatedByDbUserId: dbUser?.id,
+    });
+  }
 
   return jsonSuccess({
     action,

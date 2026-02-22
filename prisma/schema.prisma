@@ -19,6 +19,8 @@ model User {
   createdSystemAdministrators SystemAdministrator[] @relation("SystemAdministratorCreatedBy")
   dividendApprovalRequests DividendApprovalRequest[] @relation("DividendApprovalRequester")
   dividendApprovals        DividendApproval[]        @relation("DividendApprover")
+  pushSubscriptions        PushSubscription[]
+  notificationDeliveries   NotificationDelivery[]
 }
 
 model Group {
@@ -148,6 +150,7 @@ model DividendEvent {
   executedAt        DateTime                 @default(now())
   approvalRequestId String?                  @unique
   approvalRequest   DividendApprovalRequest? @relation(fields: [approvalRequestId], references: [id])
+  notificationDeliveries NotificationDelivery[]
 
   @@index([albumId, executedAt])
   @@index([photoStorageId])
@@ -192,6 +195,57 @@ model DividendApproval {
 
   @@unique([approvalRequestId, userId])
   @@index([userId])
+}
+
+
+enum NotificationType {
+  DIVIDEND_RECEIVED
+}
+
+enum NotificationStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  isActive  Boolean  @default(true)
+  lastUsedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, isActive])
+}
+
+model NotificationDelivery {
+  id              String             @id @default(cuid())
+  type            NotificationType   @default(DIVIDEND_RECEIVED)
+  status          NotificationStatus @default(PENDING)
+  userId          Int
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dividendEventId String
+  dividendEvent   DividendEvent      @relation(fields: [dividendEventId], references: [id], onDelete: Cascade)
+  dedupeKey       String             @unique
+  payload         Json
+  attemptCount    Int                @default(0)
+  maxAttempts     Int                @default(5)
+  nextAttemptAt   DateTime           @default(now())
+  lastError       String?            @db.Text
+  sentAt          DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@unique([dividendEventId, userId])
+  @@index([status, nextAttemptAt])
+  @@index([userId, createdAt])
 }
 
 model MoodRecord {
