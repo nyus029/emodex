@@ -3,8 +3,18 @@ import type { NextRequest } from 'next/server';
 import { auth0 } from './lib/auth0';
 
 export async function proxy(request: Request) {
-  const authResponse = await auth0.middleware(request);
   const { pathname, search } = new URL(request.url);
+  const maintenanceForbidAll = process.env.MAINTENANCE_FORBID_ALL === 'true';
+
+  if (maintenanceForbidAll) {
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    return new NextResponse('Forbidden', { status: 403 });
+  }
+
+  const authResponse = await auth0.middleware(request);
 
   if (pathname.startsWith('/auth/') || pathname === '/login') {
     return authResponse;
@@ -25,7 +35,5 @@ export async function proxy(request: Request) {
 }
 
 export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|_next/data|favicon.ico|icon|apple-icon|manifest.webmanifest|sw\\.js|push-sw\\.js|sitemap.xml|robots.txt|api/cron|api/health|api/docs).*)',
-  ],
+  matcher: ['/:path*'],
 };
