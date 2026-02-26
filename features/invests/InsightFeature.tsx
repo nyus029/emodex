@@ -301,7 +301,12 @@ export default function InsightFeature({ albumId }: InsightFeatureProps) {
         <div className="rounded-xl bg-white px-4 py-4 shadow-card">
           <PeriodTabs selected={period} onChange={setPeriod} />
           <div className="mt-3">
-            <EmoChart data={chartData} loading={loadingChart} />
+            <EmoChart
+              data={chartData}
+              loading={loadingChart}
+              changeValue={changeValue}
+              isPositive={isPositive}
+            />
           </div>
         </div>
 
